@@ -1,0 +1,12 @@
+.coverage
+__pycache__
+app.conf
+secrets/
+*.crt
+*.key
+*.priv
+*.pub
+*.pem
+coverage.xml
+.venv
+version.json

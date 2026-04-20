@@ -1,0 +1,57 @@
+[tool.poetry]
+name = "gfmodules-nationale-verwijsindex-crypto-service-api"
+version = "0.1.0"
+description = ""
+license = "EUPL-1.2"
+authors = ["Ministerie van Volksgezondheid, Welzijn en Sport"]
+repository = "https://github.com/minvws/gfmodules-nationale-verwijsindex-crypto-service-api"
+readme = "README.md"
+packages = [{ include = "app" }]
+include = [{ path="version.json" }]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+uvicorn = "^0.44.0"
+fastapi = "^0.135.3"
+mypy = "^1.20.1"
+pydantic-settings = "^2.13.1"
+inject = "^5.3.0"
+jwcrypto = "^1.5.7"
+opentelemetry-sdk = "^1.39.1"
+opentelemetry-exporter-otlp-proto-grpc = "^1.39.1"
+opentelemetry-instrumentation = "^0.60b1"
+opentelemetry-instrumentation-fastapi = "^0.60b1"
+opentelemetry-instrumentation-requests = "^0.60b1"
+pyoprf = "0.9.3"
+statsd = "^4.0.1"
+requests = "^2.32.5"
+pykcs11 = "^1.5.16"
+pycryptodome = "^3.20.0"
+types-requests = "^2.32.4.20260107"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^9.0.3"
+pytest-cov = "^7.1.0"
+pytest-mock = "^3.15.0"
+ruff = "^0.15.10"
+codespell = "^2.4.2"
+pip-audit = "^2.10.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.ruff]
+cache-dir = "~/.cache/ruff"
+include = ["pyproject.toml", "app/*.py", "tests/*.py"]
+
+[tool.mypy]
+files = "app,tests"
+python_version = "3.11"
+strict = true
+cache_dir = "~/.cache/mypy"
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+cache_dir = "~/.cache/pytest"
+testpaths = ["tests"]
