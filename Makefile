@@ -3,6 +3,8 @@ NEW_GID = 1000
 
 ifdef DOCKER
   RUN_PREFIX := docker compose run --rm app
+else ifdef POETRY
+  RUN_PREFIX := poetry run
 else
   RUN_PREFIX :=
 endif
