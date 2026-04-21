@@ -38,7 +38,7 @@ spelling-fix: ## Fix spelling mistakes
 	$(RUN_PREFIX) codespell . --write-changes --interactive=3
 
 test: ## Runs automated tests
-	$(RUN_PREFIX) pytest --cov
+	$(RUN_PREFIX) pytest --cov --cov-report=term --cov-report=xml
 
 check: lint type-check safety-check spelling-check test ## Runs all checks
 fix: lint-fix spelling-fix ## Runs all fixers
