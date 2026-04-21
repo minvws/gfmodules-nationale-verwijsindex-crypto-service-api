@@ -83,7 +83,6 @@ COPY --from=builder --chown=${APP_USER}:${APP_GROUP} /src/.venv /src/.venv
 
 # Copy only what the app needs at runtime (no tests, docs, CI artifacts, etc.)
 COPY --chown=${APP_USER}:${APP_GROUP} app/ /src/app/
-COPY --chown=${APP_USER}:${APP_GROUP} tools/ /src/tools/
 COPY --chown=${APP_USER}:${APP_GROUP} app.conf.example /src/
 
 # version.json is generated from build args so CI workspace artifacts never leak in
