@@ -1930,32 +1930,6 @@ files = [
 windows-terminal = ["colorama (>=0.4.6)"]
 
 [[package]]
-name = "pykcs11"
-version = "1.5.18"
-description = "A Full PKCS#11 wrapper for Python"
-optional = false
-python-versions = "*"
-groups = ["main"]
-files = [
-    {file = "PyKCS11-1.5.18-cp310-cp310-win32.whl", hash = "sha256:b1fe9d789cf4905d485b42356740cb8161794c436a7bfe5f939f054f0bd0a8cb"},
-    {file = "PyKCS11-1.5.18-cp310-cp310-win_amd64.whl", hash = "sha256:704a4bf39e746a6ac04ccec87d90d9304a2b141db382bad4fe4bf7454c3b1cb1"},
-    {file = "PyKCS11-1.5.18-cp311-cp311-win32.whl", hash = "sha256:e82b21e5fc6fd1d254c7eec782dce1f6b3ec910ddaacdf479542e5255def06b4"},
-    {file = "PyKCS11-1.5.18-cp311-cp311-win_amd64.whl", hash = "sha256:110b19f3fdf53ae002440edc7e4452aad5758f200f3209afa05db0c9e43da25f"},
-    {file = "PyKCS11-1.5.18-cp37-cp37m-win32.whl", hash = "sha256:66261a2c16bd730ef19bcfa65b94f9006d968605a21be8da5d2d8c30c0dfc1c9"},
-    {file = "PyKCS11-1.5.18-cp37-cp37m-win_amd64.whl", hash = "sha256:b87c44c30d330d6fd82f5b94b52fd855f159af92c44a28a8fb2f2c2fb46cf954"},
-    {file = "PyKCS11-1.5.18-cp38-cp38-win32.whl", hash = "sha256:13bbda2f081613af35dd1ac93291b6ade7097f837bdd2c9d79bf0c6ab39a7717"},
-    {file = "PyKCS11-1.5.18-cp38-cp38-win_amd64.whl", hash = "sha256:3c46ceb9e834e3306ca2d8a78cdc4d0a90dcb7ecd8a896996b757b3a1e4be817"},
-    {file = "PyKCS11-1.5.18-cp39-cp39-win32.whl", hash = "sha256:8c80486f1053a61fa95823b79247c72153f2812c5ac3faf6bf3086004be9bd49"},
-    {file = "PyKCS11-1.5.18-cp39-cp39-win_amd64.whl", hash = "sha256:ea772f4717480e97901677b103dc4e267c0df4023ba0f44721487013283aed29"},
-    {file = "pykcs11-1.5.18-cp312-cp312-win32.whl", hash = "sha256:505f7c5565934dcace4e4b70404792ae0ae7208e53d5b170d31873064d3d59c4"},
-    {file = "pykcs11-1.5.18-cp312-cp312-win_amd64.whl", hash = "sha256:5e900551bde66ea470d49ec1e7981f36680c87b74d004278ea8f28e9d53c74d6"},
-    {file = "pykcs11-1.5.18-cp313-cp313-macosx_15_0_x86_64.whl", hash = "sha256:a180fb431452f4ac5f0d8c8dae7cb664803d7f692465547b7720c820bc3d77ea"},
-    {file = "pykcs11-1.5.18-cp313-cp313-win32.whl", hash = "sha256:331326adefca73021482b2edc27a7bb896061e0bd65de503787f52818cea3629"},
-    {file = "pykcs11-1.5.18-cp313-cp313-win_amd64.whl", hash = "sha256:2fb89ff22c03b8358b7329cffad709838697c86cf5c9ca500dffec1a1d1c0589"},
-    {file = "pykcs11-1.5.18.tar.gz", hash = "sha256:12fd878b369821d80c1be8a140c85e8a0fb1358fcaaba66ca66869213692f227"},
-]
-
-[[package]]
 name = "pyobjc-core"
 version = "12.1"
 description = "Python<->ObjC Interoperability Module"
@@ -2927,4 +2901,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.11"
-content-hash = "39aea58dd2c46e5ec3168739cde587b9dbaddd13f180c2705aaec93bb96acb2a"
+content-hash = "bd61ae238fd70149fe065de929c9e5d25a9b66614ec50e03863bb25faba1f26b"

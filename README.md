@@ -2,7 +2,7 @@
 
 This app is a crypto service for the Nationale Verwijs Index (NVI) and is part of
 the 'Generieke Functies, lokalisatie en addressering' project of the Ministry of Health,
-Welfare and Sport of the Dutch government. This application is responsible for handling the cryptographic operations on the pseudonym from the NVI. It uses a Hardware Security Module (HSM)-(API) for secure key storage and cryptographic operations.
+Welfare and Sport of the Dutch government. This application is responsible for handling the cryptographic operations on the pseudonym from the NVI. It delegates those operations to an HSM API for secure key storage and cryptographic operations.
 
 ## NVI usage flow
 
@@ -70,8 +70,7 @@ The application will be available at `http://localhost:8577` when the startup is
 
 `tools/test_flow.py` drives the full `/decrypt_and_hash` flow end-to-end: it
 fetches the service's public key, blinds a sample pseudonym with `pyoprf`,
-wraps it in a JWE, and calls the endpoint. It works against all three
-keystore backends (`hsm_api`, `hsm`, `json`) without changes.
+wraps it in a JWE, and calls the endpoint.
 
 ### Run
 

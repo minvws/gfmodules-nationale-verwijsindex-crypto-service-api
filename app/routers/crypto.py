@@ -5,10 +5,10 @@ from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
 
 from app import container
+from app.config import get_config
 from app.exceptions.exception import CryptoError, KeyNotFoundError, InvalidJweError
 from app.services.crypto.crypto_service import CryptoService
 from app.services.pseudonym_service import PseudonymService
-from app.config import get_config
 
 logger = logging.getLogger(__name__)
 router = APIRouter()

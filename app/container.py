@@ -1,11 +1,14 @@
 import logging
 
-from app.services.crypto.crypto_service import CryptoService
-from app.services.crypto.factory import create_crypto_service
 import inject
+
+from app.config import get_config
+from app.services.crypto.crypto_service import CryptoService
+from app.services.crypto.hsm_api_crypto_service import HsmApiCryptoService
+from app.services.crypto.mock_crypto_service import MockCryptoService
+from app.services.http import HttpService
 from app.services.prs_registration_service import PrsRegistrationService
 from app.services.pseudonym_service import PseudonymService
-from app.config import get_config
 
 logger = logging.getLogger(__name__)
 
@@ -13,16 +16,30 @@ logger = logging.getLogger(__name__)
 def container_config(binder: inject.Binder) -> None:
     config = get_config()
 
-    crypto_service = create_crypto_service(config)
-
-    public_key = crypto_service.get_public_key(config.app.key_id)
-    if public_key is None:
-        logger.error(f"Failed to obtain public key for key ID '{config.app.key_id}'")
-        raise RuntimeError(
-            f"Failed to obtain public key for key ID '{config.app.key_id}'"
+    crypto_service: CryptoService
+    if config.hsm_api.mock:
+        logger.debug("Initializing mock crypto service")
+        crypto_service = MockCryptoService()
+    else:
+        logger.debug(f"Initializing HSM API at {config.hsm_api.url}")
+        http = HttpService(
+            endpoint=config.hsm_api.url,
+            timeout=config.hsm_api.timeout,
+            mtls_cert=config.hsm_api.cert_path,
+            mtls_key=config.hsm_api.key_path,
+            verify_ca=config.hsm_api.verify_ca,
+        )
+        crypto_service = HsmApiCryptoService(
+            http,
+            config.hsm_api.module,
+            config.hsm_api.slot,
+            hash_key_id=config.app.hashing_key_id,
+            signing_key_id=config.app.key_id,
         )
 
     binder.bind(CryptoService, crypto_service)
+
+    public_key = crypto_service.get_public_key(config.app.key_id)
 
     prs_registration_service = PrsRegistrationService(
         nvi_ura_number=config.app.nvi_ura_number,

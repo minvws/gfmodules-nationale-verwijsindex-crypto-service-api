@@ -21,27 +21,17 @@ class LogLevel(str, Enum):
     critical = "critical"
 
 
-class KeyStorageType(str, Enum):
-    json = "json"
-    hsm_local = "hsm_local"
-    hsm_api = "hsm_api"
-
-
 class ConfigApp(BaseModel):
     loglevel: LogLevel = Field(default=LogLevel.info)
     nvi_ura_number: str
-    keystore: KeyStorageType = Field(default=KeyStorageType.json)
     key_id: str
     hashing_key_id: str
     generate_keys_on_startup: bool = Field(default=False)
     register_prs_on_startup: bool = Field(default=False)
 
 
-class ConfigJsonKeystore(BaseModel):
-    path: str = Field(default="keystore.json")
-
-
-class ConfigHsmApiKeystore(BaseModel):
+class ConfigHsmApi(BaseModel):
+    mock: bool = Field(default=False)
     url: str
     module: str
     slot: str
@@ -49,16 +39,6 @@ class ConfigHsmApiKeystore(BaseModel):
     key_path: str | None = None
     timeout: int = Field(default=30, gt=0)
     verify_ca: str | bool = Field(default=False)
-
-
-class ConfigHsmKeystore(BaseModel):
-    slot: int = Field(default=0)
-    slot_pin: str = Field(default="1234")
-    library: str = Field(default="/usr/local/lib/softhsm/libsofthsm2.so")
-    # Temporary: SoftHSMv2 lacks CKM_RSA_PKCS_OAEP with SHA-256.
-    # When true, RSA-OAEP-256 unwrap falls back to raw RSA in the HSM
-    # plus EME-OAEP-SHA256 unpadding in software. Do not enable in production.
-    softhsm_oaep_sha256_fallback: bool = Field(default=False)
 
 
 class ConfigPseudonymApi(BaseModel):
@@ -102,9 +82,7 @@ class Config(BaseModel):
     telemetry: ConfigTelemetry
     stats: ConfigStats
     pseudonym_api: ConfigPseudonymApi
-    hsm_api_keystore: ConfigHsmApiKeystore
-    hsm_keystore: ConfigHsmKeystore
-    json_keystore: ConfigJsonKeystore
+    hsm_api: ConfigHsmApi
 
 
 def read_ini_file(path: str) -> Any:
