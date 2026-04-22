@@ -1,0 +1,76 @@
+[app]
+# Loglevel can be one of: debug, info, warning, error, critical
+loglevel=debug
+# Uranumber of the NVI service
+nvi_ura_number = 12345678
+# Key-id to use
+key_id=1234567890abcdef
+# Hashing key-id to use for hashing the pseudonyms
+hashing_key_id=abcdef1234567890
+# Whether to generate keys on startup if they do not exist
+generate_keys_on_startup = True
+# Whether to register the NVI at the PRS on startup
+register_at_prs_on_startup = True
+
+[pseudonym_api]
+endpoint = https://localhost:8000
+timeout = 30
+mtls_cert = /path/to/cert.pem
+mtls_key = /path/to/key.pem
+verify_ca = /path/to/ca.pem
+
+[hsm_api]
+# If true, use a pass-through mock instead of calling the HSM API
+mock = False
+# Url to the HSM api
+url = http://localhost:8000
+# Module of the HSM
+module = softhsm
+# Label of the slot to use for the HSM api
+slot = SoftHSMLabel
+# Certificate path for the HSM api
+cert_path = secrets/hsm-api.crt
+# Key path for the HSM api
+key_path = secrets/hsm-api.key
+# Also support SHA-1 next to SHA-256
+support_sha1 = False
+
+[telemetry]
+# Telemetry is enabled or not
+enabled = False
+# Endpoint to GRPC server for telemetry
+endpoint = http://tracing:4317
+# Service name to use
+service_name = nationale verwijsindex crypto service api
+# Tracer name to use
+tracer_name = zmodules.service.nationale-verwijsindex-crypto-service-api
+
+[stats]
+# Statsd is enabled or not
+enabled = False
+# Host for statsd server
+host = 127.0.0.1
+# Port for statsd server
+port = 8125
+# Module name for statsd
+module_name = localisation
+
+[uvicorn]
+# If true, the api docs will be enabled
+swagger_enabled = True
+# Endpoint for swagger api docs
+docs_url = /docs
+# Endpoint for redoc api docs
+redoc_url = /redocs
+# Host for the uvicorn server
+host = 0.0.0.0
+# Port for the uvicorn server
+port = 8577
+# Live reload for uvicorn server
+reload = True
+
+# SSL configuration
+use_ssl = False
+ssl_base_dir = secrets/ssl
+ssl_cert_file = server.cert
+ssl_key_file = server.key
