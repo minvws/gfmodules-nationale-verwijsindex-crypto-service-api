@@ -25,7 +25,7 @@ NVI Crypto Service
 
 @router.get(
     "/",
-    summary="API Home",
+    summary="NVI Crypto Service Home",
     description="Display the NVI Crypto Service welcome page with ASCII logo and version information.",
     status_code=200,
     responses={
