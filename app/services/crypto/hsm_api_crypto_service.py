@@ -20,11 +20,13 @@ class HsmApiCryptoService(CryptoService):
         slot: str,
         hash_key_id: str,
         signing_key_id: str,
+        support_sha1: bool = False
     ):
         logger.debug(f"Initializing HSM API service: module={module}, slot={slot}")
         self._http = http
         self.module = module
         self.slot = slot
+        self.support_sha1 = support_sha1
         self.hash_key_id = hash_key_id
         self.signing_key_id = signing_key_id
         self.public_key: str | None = None
@@ -72,10 +74,18 @@ class HsmApiCryptoService(CryptoService):
         if not enc or enc != "A256GCM":
             raise InvalidJweError(f"Unsupported encryption algorithm: {enc}")
         alg = header.get("alg", None)
-        if not alg or alg != "RSA-OAEP-256":
+        if not alg:
+            raise InvalidJweError("Missing 'alg' in JWE header")
+        alg_map = {
+            "RSA-OAEP-256": "sha256",
+        }
+        if self.support_sha1:
+            alg_map["RSA-OAEP"] = "sha1"
+        hashmethod = alg_map.get(alg, None)
+        if not hashmethod:
             raise InvalidJweError(f"Unsupported key management algorithm: {alg}")
         encrypted_key = base64.urlsafe_b64decode(encrypted_key_b64 + "==")
-        cek = self._rsa_oaep_unwrap(key_id, encrypted_key)
+        cek = self._rsa_oaep_unwrap(key_id, encrypted_key, hashmethod)
 
         if len(cek) != 32:  # 256 bits for A256GCM
             raise CryptoError(f"Unwrapped CEK length {len(cek)} does not match {enc}")
@@ -152,7 +162,7 @@ class HsmApiCryptoService(CryptoService):
             raise CryptoError(f"Failed to generate hashing key: {r.text}")
 
 
-    def _rsa_oaep_unwrap(self, key_id: str, encrypted_key: bytes) -> bytes:
+    def _rsa_oaep_unwrap(self, key_id: str, encrypted_key: bytes, hashmethod: str) -> bytes:
         logger.debug(f"Unwrapping CEK with RSA-OAEP using key {key_id}")
         r = self._http.do_request(
             "POST",
@@ -161,7 +171,7 @@ class HsmApiCryptoService(CryptoService):
                 "label": key_id,
                 "objtype": "PRIVATE_KEY",
                 "mechanism": "RSA_PKCS_OAEP",
-                "hashmethod": "sha256",
+                "hashmethod": hashmethod,
                 "data": base64.b64encode(encrypted_key).decode("utf-8"),
             },
         )

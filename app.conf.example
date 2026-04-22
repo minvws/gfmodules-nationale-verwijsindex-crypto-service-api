@@ -32,6 +32,8 @@ slot = SoftHSMLabel
 cert_path = secrets/hsm-api.crt
 # Key path for the HSM api
 key_path = secrets/hsm-api.key
+# Also support SHA-1 next to SHA-256
+support_sha1 = False
 
 [telemetry]
 # Telemetry is enabled or not

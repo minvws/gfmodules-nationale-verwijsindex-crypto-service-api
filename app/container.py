@@ -31,10 +31,11 @@ def container_config(binder: inject.Binder) -> None:
         )
         crypto_service = HsmApiCryptoService(
             http,
-            config.hsm_api.module,
-            config.hsm_api.slot,
+            module=config.hsm_api.module,
+            slot=config.hsm_api.slot,
             hash_key_id=config.app.hashing_key_id,
             signing_key_id=config.app.key_id,
+            support_sha1=config.hsm_api.support_sha1
         )
 
     binder.bind(CryptoService, crypto_service)
