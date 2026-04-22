@@ -19,6 +19,9 @@ class MockCryptoService(CryptoService):
     def health_check(self) -> bool:
         return True
 
+    def get_public_key(self, key_id: str) -> str:
+        return "no-key"
+
     def generate_keys(self) -> None:
         return None
 

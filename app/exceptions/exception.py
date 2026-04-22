@@ -1,11 +1,17 @@
 class PrsRegisterError(Exception):
     pass
 
+
 class CryptoError(Exception):
-    pass
+    status_code = 500
+    error_message = "Crypto operation failed"
+
 
 class KeyNotFoundError(CryptoError):
-    pass
+    status_code = 404
+    error_message = "Key not found"
 
-class InvalidJweError(Exception):
-    pass
+
+class InvalidJweError(CryptoError):
+    status_code = 400
+    error_message = "Invalid JWE"

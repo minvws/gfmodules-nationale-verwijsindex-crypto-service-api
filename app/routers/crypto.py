@@ -6,7 +6,7 @@ from fastapi.responses import JSONResponse
 
 from app import container
 from app.config import get_config
-from app.exceptions.exception import CryptoError, KeyNotFoundError, InvalidJweError
+from app.exceptions.exception import CryptoError
 from app.services.crypto.crypto_service import CryptoService
 from app.services.pseudonym_service import PseudonymService
 
@@ -42,20 +42,10 @@ def decrypt_and_hash(
         return JSONResponse(
             content={"hashed_pseudonym": hashed_pseudonym}, status_code=200
         )
-    except InvalidJweError as e:
-        logger.error(f"Invalid JWE: {e}")
-        return JSONResponse(
-            content={"error": "Invalid JWE"}, status_code=400
-        )
-    except KeyNotFoundError as e:
-        logger.error(f"Key not found: {e}")
-        return JSONResponse(
-            content={"error": "Key not found"}, status_code=404
-        )
     except CryptoError as e:
-        logger.error(f"Crypto operation failed: {e}")
+        logger.error(f"{type(e).__name__}: {e}")
         return JSONResponse(
-            content={"error": "Crypto operation failed"}, status_code=500
+            content={"error": e.error_message}, status_code=e.status_code
         )
     except Exception as e:
         logger.error(f"Unexpected error: {e}")

@@ -53,12 +53,12 @@ class HsmApiCryptoService(CryptoService):
         if r.status_code != 200:
             raise KeyNotFoundError(f"Failed to retrieve public key: {r.text}")
         try:
-            self.public_key = r.json()["objects"][0]["publickey"]
-            if not self.public_key:
-                raise KeyNotFoundError(f"Public key not found in response: {r.text}")
-            return self.public_key
+            self.public_key = r.json()["objects"][0].get("publickey")
         except (KeyError, IndexError):
             raise CryptoError(f"Unexpected object details response: {r.text}")
+        if not self.public_key:
+            raise KeyNotFoundError(f"Public key not found in response: {r.text}")
+        return self.public_key
 
     def decrypt_jwe(self, jwe_token: str, key_id: str) -> bytes:
         """Decrypt RSA-OAEP(+A256GCM) JWE: unwrap CEK in HSM, decrypt locally."""
@@ -134,8 +134,8 @@ class HsmApiCryptoService(CryptoService):
             for obj in result:
                 if obj.get("LABEL") == self.signing_key_id and obj.get("CLASS") == "PUBLIC_KEY":
                     public_key = obj.get("publickey")
-                    if public_key and isinstance(public_key, str):
-                        return public_key # type: ignore
+                    if isinstance(public_key, str) and public_key:
+                        return public_key
             raise CryptoError(f"Public key not found in response: {r.text}")
         except (KeyError, TypeError, JSONDecodeError):
             raise CryptoError(f"Unexpected response from generate/rsa: {r.text}")

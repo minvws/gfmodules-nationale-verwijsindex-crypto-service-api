@@ -1,4 +1,5 @@
 import logging
+from typing import cast
 
 import inject
 
@@ -52,7 +53,7 @@ def container_config(binder: inject.Binder) -> None:
 
 
 def get_crypto_service() -> CryptoService:
-    return inject.instance(CryptoService)
+    return cast(CryptoService, inject.instance(CryptoService))
 
 
 def get_prs_registration_service() -> PrsRegistrationService:
