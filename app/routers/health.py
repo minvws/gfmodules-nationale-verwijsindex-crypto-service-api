@@ -23,7 +23,7 @@ def health(
     logger.debug("Checking application health")
 
     components = {
-        "HSM API": ok_or_error(crypto_service.health_check()),
+        "hsm_api": ok_or_error(crypto_service.health_check()),
     }
     healthy = ok_or_error(all(value == "ok" for value in components.values()))
 
