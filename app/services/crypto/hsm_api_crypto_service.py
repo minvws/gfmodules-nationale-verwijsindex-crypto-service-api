@@ -3,6 +3,7 @@ import json
 import logging
 
 from Crypto.Cipher import AES
+from requests import JSONDecodeError, Response
 
 from app.exceptions.exception import CryptoError, InvalidJweError, KeyNotFoundError
 from app.services.crypto.crypto_service import CryptoService
@@ -108,8 +109,26 @@ class HsmApiCryptoService(CryptoService):
             raise CryptoError(f"HMAC operation failed: {r.text}")
         try:
             return base64.b64decode(r.json()["result"]["data"])
-        except (KeyError, TypeError):
+        except (KeyError, TypeError, JSONDecodeError):
             raise CryptoError(f"Unexpected HMAC response: {r.text}")
+        
+    def _parse_key_pair_result(self, r: Response) -> str:
+        if r.status_code == 409 or "already exists" in r.text:
+            return self.get_public_key(self.signing_key_id)
+        if r.status_code != 200:
+            logger.error(f"Failed to parse error response: {r.text}")
+            raise CryptoError(f"Failed to generate RSA key pair: {r.text}")
+        try:
+            data = r.json()
+            result = data.get("result", [])
+            for obj in result:
+                if obj.get("LABEL") == self.signing_key_id and obj.get("CLASS") == "PUBLIC_KEY":
+                    public_key = obj.get("publickey")
+                    if public_key and isinstance(public_key, str):
+                        return public_key # type: ignore
+            raise CryptoError(f"Public key not found in response: {r.text}")
+        except (KeyError, TypeError, JSONDecodeError):
+            raise CryptoError(f"Unexpected response from generate/rsa: {r.text}")
 
     def _generate_signing_key(self) -> str:
         """Generate the signing RSA key and return its public key."""
@@ -119,15 +138,7 @@ class HsmApiCryptoService(CryptoService):
             sub_route=f"hsm/{self.module}/{self.slot}/generate/rsa",
             data={"label": self.signing_key_id, "bits": 2048},
         )
-        if r.status_code == 409 or "already exists" in r.text:
-            return self.get_public_key(self.signing_key_id)
-        if r.status_code != 200:
-            logger.error(f"Failed to parse error response: {r.text}")
-            raise CryptoError(f"Failed to generate RSA key pair: {r.text}")
-        try:
-            return r.json()["result"]["publickey"]  # type: ignore
-        except (KeyError, TypeError):
-            raise CryptoError(f"Unexpected response from generate/rsa: {r.text}")
+        return self._parse_key_pair_result(r)
 
     def _generate_hashing_key(self) -> None:
         """Generate the hashing secret key for HMAC operations."""
@@ -158,6 +169,6 @@ class HsmApiCryptoService(CryptoService):
             raise CryptoError(f"RSA-OAEP unwrap failed: {r.text}")
         try:
             return base64.b64decode(r.json()["result"])
-        except (KeyError, TypeError):
+        except (KeyError, TypeError, JSONDecodeError):
             raise CryptoError(f"Unexpected decrypt response: {r.text}")
         

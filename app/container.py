@@ -39,12 +39,9 @@ def container_config(binder: inject.Binder) -> None:
 
     binder.bind(CryptoService, crypto_service)
 
-    public_key = crypto_service.get_public_key(config.app.key_id)
-
     prs_registration_service = PrsRegistrationService(
         nvi_ura_number=config.app.nvi_ura_number,
         config=config.pseudonym_api,
-        public_key=public_key,
         register_app=config.app.register_prs_on_startup
     )
     binder.bind(PrsRegistrationService, prs_registration_service)

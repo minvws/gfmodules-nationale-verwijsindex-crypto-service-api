@@ -15,11 +15,9 @@ class PrsRegistrationService:
         self,
         nvi_ura_number: str,
         config: ConfigPseudonymApi,
-        public_key: str,
         register_app: bool = False,
     ) -> None:
         self._config = config
-        self._public_key = public_key
         self._http_service = HttpService(
             endpoint=self._config.endpoint,
             timeout=self._config.timeout,
@@ -30,11 +28,11 @@ class PrsRegistrationService:
         self._nvi_ura_number = nvi_ura_number
         self._register_app = register_app
 
-    def register_nvi_at_prs(self) -> None:
+    def register_nvi_at_prs(self, public_key: str) -> None:
         logger.debug("Registering NVI at PRS")
         if self._register_app:
             self._register_organization()
-            self._register_certificate()
+            self._register_certificate(public_key)
 
     def _register_organization(self) -> None:
         try:
@@ -59,14 +57,14 @@ class PrsRegistrationService:
             logger.error(f"Failed to register organization: {e}")
             raise PrsRegisterError("Failed to register organization")
 
-    def _register_certificate(self) -> None:
+    def _register_certificate(self, public_key: str) -> None:
         try:
             response = self._http_service.do_request(
                 method="POST",
                 sub_route="register/certificate",
                 data={
                     "scope": ["nationale-verwijsindex"],
-                    "public_key": self._public_key,
+                    "public_key": public_key,
                 },
             )
 

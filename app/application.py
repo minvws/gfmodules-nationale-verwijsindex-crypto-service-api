@@ -5,7 +5,7 @@ from typing import Any
 from fastapi import FastAPI
 import uvicorn
 
-from app.config import get_config
+from app.config import ConfigApp, get_config
 from app.stats import StatsdMiddleware
 from app.routers.default import router as default_router
 from app.routers.health import router as health_router
@@ -44,23 +44,28 @@ def run() -> None:
 def create_fastapi_app() -> FastAPI:
     application_init()
     fastapi = setup_fastapi()
-    register_at_prs()
-    generate_keys_on_startup()
+    conf = get_config().app
+    pub_key = generate_keys_on_startup(conf) # If enabled, generate keys on startup
+    register_at_prs(conf,pub_key) # If enabled, register NVI at the PRS
 
     return fastapi
 
 
-def register_at_prs() -> None:
-    prs_registration_service = get_prs_registration_service()
-    prs_registration_service.register_nvi_at_prs()
+def register_at_prs(conf: ConfigApp, pub_key: str) -> None:
+    if conf.register_at_prs_on_startup:
+        prs_registration_service = get_prs_registration_service()
+        prs_registration_service.register_nvi_at_prs(pub_key)
 
-def generate_keys_on_startup() -> None:
-    if get_config().app.generate_keys_on_startup:
+def generate_keys_on_startup(conf: ConfigApp) -> str:
+    
+    if conf.generate_keys_on_startup:
         crypto_service = get_crypto_service()
         if not crypto_service.health_check():
             logger.error("Crypto service health check failed")
         logger.debug("Generating keys on startup")
         crypto_service.generate_keys()
+    return crypto_service.get_public_key(conf.key_id)
+
 
 def application_init() -> None:
     setup_logging()

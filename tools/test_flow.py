@@ -36,7 +36,7 @@ def main() -> int:
     # Create JWE
     payload = {"subject": f"pseudonym:eval:{b64url(blinded)}"}
     pub_jwk = jwk.JWK.from_pem(pub_pem)
-    protected = {"alg": "RSA-OAEP-256", "enc": "A256GCM", "kid": kid}
+    protected = {"alg": "RSA-OAEP", "enc": "A256GCM", "kid": kid}
     token = jwe.JWE(json.dumps(payload).encode(), json.dumps(protected))
     token.add_recipient(pub_jwk)
     jwe_compact = token.serialize(compact=True)
