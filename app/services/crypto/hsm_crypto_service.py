@@ -49,6 +49,7 @@ class HsmCryptoService(CryptoService):
                 "SoftHSM OAEP-SHA256 fallback enabled: RSA-OAEP-256 will use raw RSA "
                 "in the HSM with software-side OAEP unpadding. Not for production."
             )
+        self.public_key: str | None = None 
 
     def health_check(self) -> bool:
         try:
@@ -62,13 +63,16 @@ class HsmCryptoService(CryptoService):
 
     def get_public_key(self, key_id: str) -> str:
         """Retrieve the public key for an existing key pair."""
+        if self.public_key:
+            return self.public_key
         logger.debug(f"Getting public key for {key_id}")
         sess = self._open_session()
         pub_objects = self._key_exists(sess, key_id, PyKCS11.LowLevel.CKO_PUBLIC_KEY)
         if len(pub_objects) == 0:
             logger.error(f"Public key '{key_id}' not found in HSM")
             raise KeyNotFoundError(f"Public key '{key_id}' not found in HSM")
-        return self._public_key(sess, pub_objects[0])
+        self.public_key = self._public_key(sess, pub_objects[0])
+        return self.public_key
 
     def decrypt_jwe(self, jwe_token: str, key_id: str) -> bytes:
         """Decrypt JWE: RSA key-unwrap in HSM, AES-GCM locally."""

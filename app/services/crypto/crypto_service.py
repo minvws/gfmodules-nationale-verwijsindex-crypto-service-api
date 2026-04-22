@@ -20,7 +20,6 @@ class CryptoService:
     def get_public_key(self, key_id: str) -> str:
         """
         Retrieve the public key for an existing key pair identified by key_id.
-        The key must already exist (auto-generated during service initialization).
         Returns the public key as PEM-encoded string.
         """
         raise NotImplementedError

@@ -2,6 +2,7 @@ import json
 import logging
 import base64
 import os
+from typing import Dict
 
 from jwcrypto import jwk
 
@@ -19,17 +20,20 @@ class JsonKeyStorage:
 
     def __init__(self, path: str) -> None:
         self.path = path
-
-        try:
-            with open(path, "r") as f:
-                self._store: dict[str, str] = json.load(f)
-        except Exception:
-            logger.warning(
-                f"Could not load keystore from {path}, starting with empty store"
-            )
-            self._store = {}
+        self._store: Dict[str, str] = self._init_store()
 
         logger.debug(f"Loaded {len(self._store)} key(s) from disk")
+
+    def _init_store(self) -> Dict[str, str]:
+        try:
+            with open(self.path, "r") as f:
+                store: Dict[str, str] = json.load(f)
+        except Exception:
+            logger.warning(
+                f"Could not load keystore from {self.path}, starting with empty store"
+            )
+            store = {}
+        return store
 
     def generate_key(self, key_id: str) -> None:
         if key_id in self._store:

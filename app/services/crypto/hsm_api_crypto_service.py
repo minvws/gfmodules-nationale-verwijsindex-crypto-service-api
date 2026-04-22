@@ -26,6 +26,7 @@ class HsmApiCryptoService(CryptoService):
         self.slot = slot
         self.hash_key_id = hash_key_id
         self.signing_key_id = signing_key_id
+        self.public_key: str | None = None
 
     def health_check(self) -> bool:
         r = self._http.do_request("GET")
@@ -39,6 +40,8 @@ class HsmApiCryptoService(CryptoService):
 
     def get_public_key(self, key_id: str) -> str:
         """Retrieve the public key for an existing key pair."""
+        if self.public_key:
+            return self.public_key
         r = self._http.do_request(
             "POST",
             sub_route=f"hsm/{self.module}/{self.slot}",
@@ -47,7 +50,10 @@ class HsmApiCryptoService(CryptoService):
         if r.status_code != 200:
             raise KeyNotFoundError(f"Failed to retrieve public key: {r.text}")
         try:
-            return r.json()["objects"][0]["publickey"]  # type: ignore
+            self.public_key = r.json()["objects"][0]["publickey"]
+            if not self.public_key:
+                raise KeyNotFoundError(f"Public key not found in response: {r.text}")
+            return self.public_key
         except (KeyError, IndexError):
             raise CryptoError(f"Unexpected object details response: {r.text}")
 
@@ -113,15 +119,10 @@ class HsmApiCryptoService(CryptoService):
             sub_route=f"hsm/{self.module}/{self.slot}/generate/rsa",
             data={"label": self.signing_key_id, "bits": 2048},
         )
-        if r.status_code == 409:
+        if r.status_code == 409 or "already exists" in r.text:
             return self.get_public_key(self.signing_key_id)
         if r.status_code != 200:
-            try:
-                error_msg = r.json().get("error_description")
-                if error_msg and "already exists" in error_msg:
-                    return self.get_public_key(self.signing_key_id)
-            except (ValueError, KeyError):
-                logger.error(f"Failed to parse error response: {r.text}")
+            logger.error(f"Failed to parse error response: {r.text}")
             raise CryptoError(f"Failed to generate RSA key pair: {r.text}")
         try:
             return r.json()["result"]["publickey"]  # type: ignore

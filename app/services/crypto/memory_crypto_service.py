@@ -4,6 +4,7 @@ import logging
 
 from jwcrypto import jwe
 
+from app.exceptions.exception import KeyNotFoundError
 from app.services.crypto.crypto_service import CryptoService
 from app.services.crypto.json_keystore import JsonKeyStorage
 
@@ -27,15 +28,22 @@ class MemoryCryptoService(CryptoService):
         self.keystore = keystore
         self.signing_key_id = signing_key_id
         self.hashing_key_id = hashing_key_id
+        self.public_key: str | None = None
+
 
     def health_check(self) -> bool:
         return True
 
     def get_public_key(self, key_id: str) -> str:
         """Retrieve the public key for an existing key pair."""
+        if self.public_key:
+            return self.public_key
         logger.debug(f"Getting public key for {key_id}")
         rsa_jwk = self.keystore.get_jwk(key_id)
-        return rsa_jwk.export_to_pem(private_key=False).decode("utf-8")  # type: ignore
+        self.public_key = rsa_jwk.export_to_pem(private_key=False).decode("utf-8")
+        if not self.public_key:
+            raise KeyNotFoundError(f"Public key not found for key ID '{key_id}'")
+        return self.public_key
 
     def decrypt_jwe(self, jwe_token: str, key_id: str) -> bytes:
         logger.debug(f"Decrypting JWE with key {key_id}")
