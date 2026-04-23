@@ -12,6 +12,21 @@ generate_keys_on_startup = False
 # Whether to register the NVI at the PRS on startup
 register_at_prs_on_startup = False
 
+[logging]
+# Syslog addresses in host:port format (UDP)
+# Application logs go to stdout and to handler
+app_path = syslog:5514
+# Siem is for security events
+siem_path = syslog:5515
+# Logs for public inspection
+public_inspect_path = syslog:5516
+# Logs for debugging purposes
+debug_path = syslog:5517
+# Include exception/stack traces in JSON logs
+include_traces = True
+# Whether to display debug logs in the console
+debug_logs_in_console = True
+
 [pseudonym_api]
 endpoint = https://localhost:8000
 timeout = 30

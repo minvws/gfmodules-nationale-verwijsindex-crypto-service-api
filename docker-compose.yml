@@ -20,9 +20,14 @@ services:
             test: ["CMD", "curl", "-f", "http://localhost:8577/health"]
             interval: 1m
             start_period: 30s
-        networks:
-            - gfmodules
 
-networks:
-  gfmodules:
-    driver: bridge
+    syslog:
+        image: balabit/syslog-ng:latest
+        ports:
+            - "5514:5514/udp" # App logs
+            - "5515:5515/udp" # SIEM
+            - "5516:5516/udp" # Public inspection
+            - "5517:5517/udp" # Debug
+        volumes:
+            - ./docker/syslog-ng.conf:/etc/syslog-ng/syslog-ng.conf
+            - ./logs:/var/log/app

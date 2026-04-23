@@ -10,3 +10,4 @@ secrets/
 coverage.xml
 .venv
 version.json
+*.log

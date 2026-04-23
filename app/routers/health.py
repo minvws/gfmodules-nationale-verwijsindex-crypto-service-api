@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
 
 from app.container import get_crypto_service
+from app.logging.events import HEALTH_UNHEALTHY, log_event
 from app.services.crypto.crypto_service import CryptoService
 
 
@@ -25,12 +26,23 @@ def health(
     components = {
         "hsm_api": ok_or_error(crypto_service.health_check()),
     }
-    healthy = ok_or_error(all(value == "ok" for value in components.values()))
+    healthy = all(status == "ok" for status in components.values())
+
+    if not healthy:
+        unhealthy = [name for name, status in components.items() if status != "ok"]
+        log_event(
+            logger,
+            HEALTH_UNHEALTHY,
+            "Health check unhealthy",
+            unhealthy_component=",".join(unhealthy),
+            status="error",
+            error_detail="",
+        )
 
     return JSONResponse(
-        status_code=200 if healthy == "ok" else 503,
+        status_code=200 if healthy else 503,
         content={
-            "status": healthy,
+            "status": ok_or_error(healthy),
             "components": components,
-        }
+        },
     )
