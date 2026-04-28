@@ -110,8 +110,6 @@ USER ${APP_USER}
 EXPOSE 8577
 WORKDIR ${PROJECT_DIR}
 
-ENV PYTHONPATH=${PROJECT_DIR} \
-    VIRTUAL_ENV=/src/.venv \
-    PATH="/src/.venv/bin:$PATH"
+ENV PYTHONPATH=${PROJECT_DIR}
 
 ENTRYPOINT ["/docker-entrypoint.sh"]
