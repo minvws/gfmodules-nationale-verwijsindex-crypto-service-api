@@ -57,7 +57,7 @@ def register_at_prs(conf: ConfigApp, pub_key: str) -> None:
         prs_registration_service.register_nvi_at_prs(pub_key)
 
 def generate_keys_on_startup(conf: ConfigApp) -> str:
-    
+    crypto_service = get_crypto_service()
     if conf.generate_keys_on_startup:
         crypto_service = get_crypto_service()
         if not crypto_service.health_check():

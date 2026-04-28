@@ -10,7 +10,6 @@ services:
             FASTAPI_CONFIG_PATH: /src/app.conf
         volumes:
             - ./:/src
-            - /src/.venv
             - ./secrets:/src/secrets
         ports:
             - 8577:8577
