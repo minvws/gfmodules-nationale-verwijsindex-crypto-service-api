@@ -4,8 +4,10 @@ import logging
 
 from Crypto.Cipher import AES
 from requests import JSONDecodeError, Response
+from requests.exceptions import ConnectionError as RequestsConnectionError, Timeout
 
 from app.exceptions.exception import CryptoError, InvalidJweError, KeyNotFoundError
+from app.logging.events import SYS_CRYPTO_FAILED, log_event
 from app.services.crypto.crypto_service import CryptoService
 from app.services.http import HttpService
 
@@ -32,14 +34,18 @@ class HsmApiCryptoService(CryptoService):
         self.public_key: str | None = None
 
     def health_check(self) -> bool:
-        r = self._http.do_request("GET")
+        try:
+            r = self._http.do_request("GET")
+        except (RequestsConnectionError, Timeout) as e:
+            logger.debug(f"HSM API unreachable: {e}")
+            return False
         if r.status_code != 200:
             logger.debug(
                 f"HSM API health check failed with status {r.status_code}: {r.text}"
             )
             return False
         logger.debug(f"HSM API health check response: {r.json().get('message')}")
-        return r.status_code == 200
+        return True
 
     def get_public_key(self, key_id: str) -> str:
         """Retrieve the public key for an existing key pair."""
@@ -126,8 +132,16 @@ class HsmApiCryptoService(CryptoService):
         if r.status_code == 409 or "already exists" in r.text:
             return self.get_public_key(self.signing_key_id)
         if r.status_code != 200:
-            logger.error(f"Failed to parse error response: {r.text}")
-            raise CryptoError(f"Failed to generate RSA key pair: {r.text}")
+            logger.debug(f"HSM RSA key-pair generation failed: status={r.status_code} body={r.text}")
+            log_event(
+                logger,
+                SYS_CRYPTO_FAILED,
+                "Crypto operation failed: RSA key-pair generation",
+                operation_type="rsa_keypair_generate",
+                error_reason=f"hsm_status_{r.status_code}",
+                retry_attempt=0,
+            )
+            raise CryptoError(f"Failed to generate RSA key pair: status {r.status_code}")
         try:
             data = r.json()
             result = data.get("result", [])

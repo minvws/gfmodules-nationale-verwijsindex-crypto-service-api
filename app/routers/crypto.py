@@ -43,12 +43,7 @@ def decrypt_and_hash(
             content={"hashed_pseudonym": hashed_pseudonym}, status_code=200
         )
     except CryptoError as e:
-        logger.error(f"{type(e).__name__}: {e}")
+        logger.error(f"CryptoError occurred: {e.error_message}")
         return JSONResponse(
             content={"error": e.error_message}, status_code=e.status_code
-        )
-    except Exception as e:
-        logger.error(f"Unexpected error: {e}")
-        return JSONResponse(
-            content={"error": "Operation failed"}, status_code=500
         )
