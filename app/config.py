@@ -48,7 +48,7 @@ class ConfigHsmApi(BaseModel):
     cert_path: str | None = None
     key_path: str | None = None
     timeout: int = Field(default=30, gt=0)
-    verify_ca: str | bool = Field(default=False)
+    verify_ca: str | bool = Field(default=True)
     support_sha1: bool = Field(default=False) # @TODO remove this when HSM-API supports SHA-256
 
 
