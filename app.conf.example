@@ -43,6 +43,8 @@ url = http://localhost:8000
 module = softhsm
 # Label of the slot to use for the HSM api
 slot = SoftHSMLabel
+# verify CA, supports path to file or bool
+verify_ca = secrets/hsm-api-ca.crt
 # Certificate path for the HSM api
 cert_path = secrets/hsm-api.crt
 # Key path for the HSM api
