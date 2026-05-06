@@ -9,6 +9,7 @@ from pathlib import Path
 from types import TracebackType
 from typing import Any, AsyncIterator
 
+import urllib3
 import uvicorn
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
@@ -178,6 +179,7 @@ def _install_signal_handlers() -> None:
 
 def application_init() -> None:
     setup_logging()
+    urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
     _install_excepthook()
     _install_signal_handlers()
 
