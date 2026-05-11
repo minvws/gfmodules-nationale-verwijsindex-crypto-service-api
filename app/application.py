@@ -179,7 +179,8 @@ def _install_signal_handlers() -> None:
 
 def application_init() -> None:
     setup_logging()
-    urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+    if get_config().app.allow_insecure_requests:
+        urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
     _install_excepthook()
     _install_signal_handlers()
 
