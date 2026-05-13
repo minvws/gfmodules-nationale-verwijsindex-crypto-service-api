@@ -1,12 +1,13 @@
 import logging
 from typing import Annotated
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Body, Depends
 from fastapi.responses import JSONResponse
 
 from app import container
 from app.config import get_config
 from app.exceptions.exception import CryptoError
+from app.models.pseudonym import PseudonymRequest
 from app.services.crypto.crypto_service import CryptoService
 from app.services.pseudonym_service import PseudonymService
 
@@ -24,20 +25,19 @@ def public_key(
     )
 
 
-@router.get(
+@router.post(
     "/decrypt_and_hash",
     summary="Decrypt and hash a pseudonym",
     description="Decrypt JWE, unblind, hash via HSM, and return hashed pseudonym",
 )
 def decrypt_and_hash(
-    jwe: str,
-    blind_factor: str,
+    data: Annotated[PseudonymRequest, Body()],
     pseudonym_service: Annotated[
         PseudonymService, Depends(container.get_pseudonym_service)
     ],
 ) -> JSONResponse:
     try:
-        pseudonym = pseudonym_service.decrypt_and_unblind(jwe, blind_factor)
+        pseudonym = pseudonym_service.decrypt_and_unblind(data.jwe, data.blind_factor)
         hashed_pseudonym = pseudonym_service.hash(pseudonym)
         return JSONResponse(
             content={"hashed_pseudonym": hashed_pseudonym}, status_code=200

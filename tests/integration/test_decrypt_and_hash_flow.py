@@ -17,11 +17,13 @@ def test_decrypt_and_hash_full_flow(
         "subject": f"pseudonym:eval:{_b64u(subject)}"
     }
     crypto_stub.hash.return_value = b"hash-out"
-    mocker.patch("app.services.pseudonym_service.pyoprf.unblind", return_value=b"unblinded")
+    mocker.patch(
+        "app.services.pseudonym_service.pyoprf.unblind", return_value=b"unblinded"
+    )
 
-    response = client.get(
+    response = client.post(
         "/decrypt_and_hash",
-        params={"jwe": "JWE-TOKEN", "blind_factor": _b64u(b"blind-factor")},
+        data={"jwe": "JWE-TOKEN", "blind_factor": _b64u(b"blind-factor")},
     )
 
     assert response.status_code == 200
@@ -35,8 +37,8 @@ def test_decrypt_and_hash_returns_400_when_subject_invalid(
 ) -> None:
     crypto_stub.decrypt_jwe_payload.return_value = {"subject": "wrong"}
 
-    response = client.get(
-        "/decrypt_and_hash", params={"jwe": "X", "blind_factor": _b64u(b"blind-factor")}
+    response = client.post(
+        "/decrypt_and_hash", data={"jwe": "X", "blind_factor": _b64u(b"blind-factor")}
     )
 
     assert response.status_code == 400
