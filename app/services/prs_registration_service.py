@@ -4,8 +4,8 @@ from requests.exceptions import ConnectionError, HTTPError, Timeout
 
 from app.config import ConfigPseudonymApi
 from app.exceptions.exception import PrsRegisterError
+from app.services.client_oauth import PrsOAuthService
 from app.services.http import HttpService
-
 
 logger = logging.getLogger(__name__)
 
@@ -15,6 +15,7 @@ class PrsRegistrationService:
         self,
         nvi_ura_number: str,
         config: ConfigPseudonymApi,
+        client_oauth_service: PrsOAuthService,
         register_app: bool = False,
     ) -> None:
         self._config = config
@@ -27,6 +28,8 @@ class PrsRegistrationService:
         )
         self._nvi_ura_number = nvi_ura_number
         self._register_app = register_app
+        self._prs_oauth_service = client_oauth_service
+        self._access_token: str | None = None
 
     def register_nvi_at_prs(self, public_key: str) -> None:
         logger.debug("Registering NVI at PRS")
@@ -36,9 +39,14 @@ class PrsRegistrationService:
 
     def _register_organization(self) -> None:
         try:
+            headers = {}
+            if self._prs_oauth_service.enabled():
+                headers["Authorization"] = "Bearer " + self.fetch_oauth_token()
+
             response = self._http_service.do_request(
                 method="POST",
                 sub_route="orgs",
+                headers=headers,
                 data={
                     "ura": self._nvi_ura_number,
                     "name": "nationale-verwijsindex",
@@ -59,9 +67,14 @@ class PrsRegistrationService:
 
     def _register_certificate(self, public_key: str) -> None:
         try:
+            headers = {}
+            if self._prs_oauth_service.enabled():
+                headers["Authorization"] = "Bearer " + self.fetch_oauth_token()
+
             response = self._http_service.do_request(
                 method="POST",
                 sub_route="register/certificate",
+                headers=headers,
                 data={
                     "scope": ["nationale-verwijsindex"],
                     "public_key": public_key,
@@ -77,3 +90,11 @@ class PrsRegistrationService:
         except (HTTPError, ConnectionError, Timeout) as e:
             logger.error(f"Failed to register certificate: {e}")
             raise PrsRegisterError("Failed to register certificate")
+
+    def fetch_oauth_token(self) -> str:
+        if self._access_token is None:
+            self._access_token = self._prs_oauth_service.get_access_token(
+                "prs:read", self._config.endpoint
+            )
+
+        return self._access_token

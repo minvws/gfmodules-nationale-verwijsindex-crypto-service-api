@@ -4,6 +4,7 @@ from typing import cast
 import inject
 
 from app.config import get_config
+from app.services.client_oauth import PrsOAuthService
 from app.services.crypto.crypto_service import CryptoService
 from app.services.crypto.hsm_api_crypto_service import HsmApiCryptoService
 from app.services.crypto.mock_crypto_service import MockCryptoService
@@ -36,15 +37,19 @@ def container_config(binder: inject.Binder) -> None:
             slot=config.hsm_api.slot,
             hash_key_id=config.app.hashing_key_id,
             signing_key_id=config.app.key_id,
-            support_sha1=config.hsm_api.support_sha1
+            support_sha1=config.hsm_api.support_sha1,
         )
 
     binder.bind(CryptoService, crypto_service)
 
+    client_oauth_service = PrsOAuthService(config=config.client_oauth)
+    binder.bind(PrsOAuthService, client_oauth_service)
+
     prs_registration_service = PrsRegistrationService(
         nvi_ura_number=config.app.nvi_ura_number,
         config=config.pseudonym_api,
-        register_app=config.app.register_prs_on_startup
+        register_app=config.app.register_prs_on_startup,
+        client_oauth_service=client_oauth_service,
     )
     binder.bind(PrsRegistrationService, prs_registration_service)
 

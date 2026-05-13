@@ -1,10 +1,15 @@
 from unittest.mock import MagicMock
 
 import pytest
-from requests.exceptions import ConnectionError as RequestsConnectionError, HTTPError, Timeout
+from requests.exceptions import (
+    ConnectionError as RequestsConnectionError,
+    HTTPError,
+    Timeout,
+)
 
 from app.config import ConfigPseudonymApi
 from app.exceptions.exception import PrsRegisterError
+from app.services.client_oauth import PrsOAuthService
 from app.services.prs_registration_service import PrsRegistrationService
 
 
@@ -13,10 +18,18 @@ def prs_config() -> ConfigPseudonymApi:
     return ConfigPseudonymApi(endpoint="https://example.com/prs")
 
 
-
 @pytest.fixture
-def prs_service(prs_config: ConfigPseudonymApi, http_mock: MagicMock) -> PrsRegistrationService:
-    svc = PrsRegistrationService(nvi_ura_number="ura-1", config=prs_config, register_app=True)
+def prs_service(
+    prs_config: ConfigPseudonymApi,
+    http_mock: MagicMock,
+    client_oauth_service: PrsOAuthService,
+) -> PrsRegistrationService:
+    svc = PrsRegistrationService(
+        nvi_ura_number="ura-1",
+        config=prs_config,
+        register_app=True,
+        client_oauth_service=client_oauth_service,
+    )
     svc._http_service = http_mock
     return svc
 
@@ -39,7 +52,12 @@ def test_register_organization_succeeds_on_2xx(
     http_mock.do_request.assert_called_once_with(
         method="POST",
         sub_route="orgs",
-        data={"ura": "ura-1", "name": "nationale-verwijsindex", "max_key_usage": "bsn"},
+        headers={},
+        data={
+            "ura": "ura-1",
+            "name": "nationale-verwijsindex",
+            "max_key_usage": "bsn",
+        },
     )
 
 
@@ -86,6 +104,7 @@ def test_register_certificate_succeeds_on_2xx(
         method="POST",
         sub_route="register/certificate",
         data={"scope": ["nationale-verwijsindex"], "public_key": "PEM-PUBLIC-KEY"},
+        headers={},
     )
 
 
@@ -110,9 +129,16 @@ def test_register_certificate_wraps_transport_errors(
 
 
 def test_register_nvi_at_prs_skips_when_register_app_false(
-    prs_config: ConfigPseudonymApi, http_mock: MagicMock
+    prs_config: ConfigPseudonymApi,
+    http_mock: MagicMock,
+    client_oauth_service: PrsOAuthService,
 ) -> None:
-    svc = PrsRegistrationService(nvi_ura_number="u", config=prs_config, register_app=False)
+    svc = PrsRegistrationService(
+        nvi_ura_number="u",
+        config=prs_config,
+        register_app=False,
+        client_oauth_service=client_oauth_service,
+    )
     svc._http_service = http_mock
     svc.register_nvi_at_prs("k")
     http_mock.do_request.assert_not_called()

@@ -54,6 +54,18 @@ key_path = secrets/hsm-api.key
 # Also support SHA-1 next to SHA-256
 support_sha1 = False
 
+# Section for configuring the OUTGOING OAuth connections (from this service to external services)
+[prs_oauth]
+# If not enabled, we don't connect to OAuth and thus we never add a Bearer JWT token to the called service
+# If not enabled, mock services are injected if app is build with debug mode
+enabled = False
+# The OAuth server that we will connect to to fetch an access token
+issuer = https://localhost:8443/
+# Any MTLS settings for connecting to the oauth server (to fetch access tokens)
+mtls_cert = secrets/client-uzi.crt
+mtls_key =  secrets/client-uzi.key
+verify_ca =
+
 [telemetry]
 # Telemetry is enabled or not
 enabled = False

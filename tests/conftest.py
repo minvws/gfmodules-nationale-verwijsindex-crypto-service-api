@@ -7,6 +7,7 @@ from app import config as config_module
 from app.config import (
     Config,
 )
+from app.services.client_oauth import PrsOAuthService
 from tests.unit.test_config import get_test_config
 
 config_module._CONFIG = get_test_config()
@@ -60,3 +61,8 @@ def http_mock() -> MagicMock:
 @pytest.fixture
 def crypto_service_mock() -> MagicMock:
     return MagicMock(spec=CryptoService)
+
+
+@pytest.fixture()
+def client_oauth_service(use_config: Config) -> PrsOAuthService:
+    return PrsOAuthService(config=use_config.client_oauth)
