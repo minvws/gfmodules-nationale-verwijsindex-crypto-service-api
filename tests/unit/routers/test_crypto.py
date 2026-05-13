@@ -10,6 +10,7 @@ from app.config import Config
 from app.exceptions.exception import CryptoError, InvalidJweError, KeyNotFoundError
 from app.routers.crypto import router as crypto_router
 
+
 @pytest.fixture
 def client(
     crypto_mock: MagicMock, pseudonym_mock: MagicMock, use_config: Config
@@ -28,7 +29,9 @@ def test_decrypt_and_hash_returns_hashed_pseudonym(
     pseudonym_mock.decrypt_and_unblind.return_value = b"unblinded"
     pseudonym_mock.hash.return_value = "HASHED"
 
-    response = client.get("/decrypt_and_hash", params={"jwe": "JWE", "blind_factor": "BF"})
+    response = client.post(
+        "/decrypt_and_hash", json={"jwe": "JWE", "blind_factor": "BF"}
+    )
 
     assert response.status_code == 200
     assert response.json() == {"hashed_pseudonym": "HASHED"}
@@ -50,12 +53,12 @@ def test_decrypt_and_hash_maps_crypto_errors(
 ) -> None:
     pseudonym_mock.decrypt_and_unblind.side_effect = exc
 
-    response = client.get("/decrypt_and_hash", params={"jwe": "X", "blind_factor": "Y"})
+    response = client.post("/decrypt_and_hash", json={"jwe": "X", "blind_factor": "Y"})
 
     assert response.status_code == status
     assert response.json() == {"error": exc.error_message}
 
 
 def test_decrypt_and_hash_requires_query_params(client: TestClient) -> None:
-    response = client.get("/decrypt_and_hash")
+    response = client.post("/decrypt_and_hash")
     assert response.status_code == 422

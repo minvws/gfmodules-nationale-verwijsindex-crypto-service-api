@@ -5,6 +5,7 @@ from fastapi.testclient import TestClient
 from pytest_mock import MockerFixture
 
 
+
 def _b64u(data: bytes) -> str:
     return base64.urlsafe_b64encode(data).decode()
 
@@ -23,7 +24,7 @@ def test_decrypt_and_hash_full_flow(
 
     response = client.post(
         "/decrypt_and_hash",
-        data={"jwe": "JWE-TOKEN", "blind_factor": _b64u(b"blind-factor")},
+        json={"jwe": "JWE-TOKEN", "blind_factor": _b64u(b"blind-factor")},
     )
 
     assert response.status_code == 200
@@ -38,7 +39,8 @@ def test_decrypt_and_hash_returns_400_when_subject_invalid(
     crypto_stub.decrypt_jwe_payload.return_value = {"subject": "wrong"}
 
     response = client.post(
-        "/decrypt_and_hash", data={"jwe": "X", "blind_factor": _b64u(b"blind-factor")}
+        "/decrypt_and_hash",
+        json={"jwe": "X", "blind_factor": _b64u(b"blind-factor")},
     )
 
     assert response.status_code == 400
