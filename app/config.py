@@ -50,7 +50,9 @@ class ConfigHsmApi(BaseModel):
     key_path: str | None = None
     timeout: int = Field(default=30, gt=0)
     verify_ca: str | bool = Field(default=True)
-    support_sha1: bool = Field(default=False) # @TODO remove this when HSM-API supports SHA-256
+    support_sha1: bool = Field(
+        default=False
+    )  # @TODO remove this when HSM-API supports SHA-256
 
 
 class ConfigPseudonymApi(BaseModel):
@@ -58,6 +60,14 @@ class ConfigPseudonymApi(BaseModel):
     timeout: int = Field(default=30, gt=0)
     mtls_cert: str | None = None
     mtls_key: str | None = None
+    verify_ca: str | bool = Field(default=True)
+
+
+class ConfigPrsOAuth(BaseModel):
+    enabled: bool = Field(default=False)
+    issuer: str | None = Field(default=None)
+    mtls_cert: str | None = Field(default=None)
+    mtls_key: str | None = Field(default=None)
     verify_ca: str | bool = Field(default=True)
 
 
@@ -95,6 +105,7 @@ class Config(BaseModel):
     stats: ConfigStats
     pseudonym_api: ConfigPseudonymApi
     hsm_api: ConfigHsmApi
+    client_oauth: ConfigPrsOAuth
     logging: ConfigLogging = Field(default_factory=ConfigLogging)
 
 

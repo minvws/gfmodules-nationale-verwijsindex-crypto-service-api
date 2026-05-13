@@ -1,6 +1,14 @@
-
-
-from app.config import Config, ConfigApp, ConfigHsmApi, ConfigLogging, ConfigPseudonymApi, ConfigStats, ConfigTelemetry, ConfigUvicorn
+from app.config import (
+    Config,
+    ConfigApp,
+    ConfigPrsOAuth,
+    ConfigHsmApi,
+    ConfigLogging,
+    ConfigPseudonymApi,
+    ConfigStats,
+    ConfigTelemetry,
+    ConfigUvicorn,
+)
 
 
 def get_test_config() -> Config:
@@ -13,9 +21,8 @@ def get_test_config() -> Config:
         uvicorn=ConfigUvicorn(),
         telemetry=ConfigTelemetry(),
         stats=ConfigStats(),
+        client_oauth=ConfigPrsOAuth(enabled=False, issuer="https//example.com"),
         pseudonym_api=ConfigPseudonymApi(endpoint="https://example.com/prs"),
-        hsm_api=ConfigHsmApi(
-            mock=True, url="https://hsm.test", module="m", slot="s"
-        ),
+        hsm_api=ConfigHsmApi(mock=True, url="https://hsm.test", module="m", slot="s"),
         logging=ConfigLogging(),
     )
