@@ -105,7 +105,7 @@ class Config(BaseModel):
     stats: ConfigStats
     pseudonym_api: ConfigPseudonymApi
     hsm_api: ConfigHsmApi
-    client_oauth: ConfigPrsOAuth
+    prs_oauth: ConfigPrsOAuth
     logging: ConfigLogging = Field(default_factory=ConfigLogging)
 
 

@@ -21,7 +21,7 @@ def get_test_config() -> Config:
         uvicorn=ConfigUvicorn(),
         telemetry=ConfigTelemetry(),
         stats=ConfigStats(),
-        client_oauth=ConfigPrsOAuth(enabled=False, issuer="https//example.com"),
+        prs_oauth=ConfigPrsOAuth(enabled=False, issuer="https//example.com"),
         pseudonym_api=ConfigPseudonymApi(endpoint="https://example.com/prs"),
         hsm_api=ConfigHsmApi(mock=True, url="https://hsm.test", module="m", slot="s"),
         logging=ConfigLogging(),

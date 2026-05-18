@@ -42,14 +42,14 @@ def container_config(binder: inject.Binder) -> None:
 
     binder.bind(CryptoService, crypto_service)
 
-    client_oauth_service = PrsOAuthService(config=config.client_oauth)
-    binder.bind(PrsOAuthService, client_oauth_service)
+    prs_oauth_service = PrsOAuthService(config=config.prs_oauth)
+    binder.bind(PrsOAuthService, prs_oauth_service)
 
     prs_registration_service = PrsRegistrationService(
         nvi_ura_number=config.app.nvi_ura_number,
         config=config.pseudonym_api,
         register_app=config.app.register_prs_on_startup,
-        client_oauth_service=client_oauth_service,
+        client_oauth_service=prs_oauth_service,
     )
     binder.bind(PrsRegistrationService, prs_registration_service)
 

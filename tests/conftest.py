@@ -65,4 +65,4 @@ def crypto_service_mock() -> MagicMock:
 
 @pytest.fixture()
 def client_oauth_service(use_config: Config) -> PrsOAuthService:
-    return PrsOAuthService(config=use_config.client_oauth)
+    return PrsOAuthService(config=use_config.prs_oauth)
