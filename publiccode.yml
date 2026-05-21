@@ -1,0 +1,64 @@
+publiccodeYmlVersion: "0.5"
+name: Nationale Verwijsindex Crypto Service API
+url: https://github.com/minvws/gfmodules-nationale-verwijsindex-crypto-service-api
+platforms:
+  - web
+categories:
+  - application-development
+developmentStatus: development
+softwareType: standalone/backend
+intendedAudience:
+  countries:
+    - NL
+  scope:
+    - government
+    - healthcare
+
+description:
+  nl:
+    shortDescription: >-
+      Cryptografische service voor de Nationale Verwijsindex die via een HSM
+      pseudoniemen versleutelt, ontsleutelt en hasht.
+    longDescription: |
+      De Nationale Verwijsindex Crypto Service API is onderdeel van het
+      'Generieke Functies, lokalisatie en addressering' project van het
+      Ministerie van Volksgezondheid, Welzijn en Sport. De service verwerkt
+      cryptografische bewerkingen op pseudoniemen voor de NVI via een
+      Hardware Security Module (HSM). De service ontvangt een JWE en
+      blind_factor van de NVI, decrypteert de JWE via de HSM, ontblindert
+      het pseudoniem en retourneert een gehasht pseudoniem.
+    features:
+      - HSM-gebaseerde versleuteling en ontsleuteling van JWE
+      - Ontblinding van pseudoniemen
+      - Veilige hashing van pseudoniemen via HSM
+  en:
+    shortDescription: >-
+      Cryptographic service for the Nationale Verwijsindex that encrypts,
+      decrypts, and hashes pseudonyms via an HSM.
+    longDescription: |
+      The Nationale Verwijsindex Crypto Service API is part of the
+      'Generieke Functies, lokalisatie en addressering' project of the
+      Ministry of Health, Welfare and Sport. The service handles
+      cryptographic operations on pseudonyms for the NVI via a Hardware
+      Security Module (HSM). The service receives a JWE and blind_factor
+      from the NVI, decrypts the JWE using the HSM, unblinds the pseudonym,
+      and returns a hashed pseudonym.
+    features:
+      - HSM-based JWE encryption and decryption
+      - Pseudonym unblinding
+      - Secure pseudonym hashing via HSM
+
+legal:
+  license: EUPL-1.2
+  mainCopyrightOwner: Ministerie van Volksgezondheid, Welzijn en Sport
+
+maintenance:
+  type: internal
+  contacts:
+    - name: irealisatie.nl
+      email: helpdesk@irealisatie.nl
+
+localisation:
+  localisationReady: false
+  availableLanguages:
+    - nl
