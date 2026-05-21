@@ -25,7 +25,7 @@ description:
       Ministerie van Volksgezondheid, Welzijn en Sport. De service verwerkt
       cryptografische bewerkingen op pseudoniemen voor de NVI via een
       Hardware Security Module (HSM). De service ontvangt een JWE en
-      blind_factor van de NVI, decrypteert de JWE via de HSM, ontblindert
+      blind_factor van de NVI, ontsleutelt de JWE via de HSM, ontmastkert
       het pseudoniem en retourneert een gehasht pseudoniem.
     features:
       - HSM-gebaseerde versleuteling en ontsleuteling van JWE
