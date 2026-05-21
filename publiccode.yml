@@ -29,7 +29,7 @@ description:
       het pseudoniem en retourneert een gehasht pseudoniem.
     features:
       - HSM-gebaseerde versleuteling en ontsleuteling van JWE
-      - Ontblinding van pseudoniemen
+      - Ontmaskering van pseudoniemen
       - Veilige hashing van pseudoniemen via HSM
   en:
     shortDescription: >-
