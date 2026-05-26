@@ -11,7 +11,7 @@ include = [{ path="version.json" }]
 
 [tool.poetry.dependencies]
 python = "^3.11"
-uvicorn = ">=0.44,<0.48"
+uvicorn = ">=0.44,<0.49"
 fastapi = ">=0.135.3,<0.137.0"
 mypy = ">=1.20.1,<3.0.0"
 pydantic-settings = "^2.13.1"
