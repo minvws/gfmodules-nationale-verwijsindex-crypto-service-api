@@ -88,7 +88,7 @@ def create_fastapi_app() -> FastAPI:
 
 
 def register_at_prs(conf: ConfigApp, pub_key: str) -> None:
-    if conf.register_at_prs_on_startup:
+    if conf.register_prs_on_startup:
         prs_registration_service = get_prs_registration_service()
         prs_registration_service.register_nvi_at_prs(pub_key)
 
@@ -218,7 +218,7 @@ def _emit_app_started(conf: ConfigApp) -> None:
         config_path=os.environ.get(_CONFIG_ENV, _DEFAULT_CONFIG_PATH),
         mock_hsm=cfg.hsm_api.mock,
         generate_keys_on_startup=conf.generate_keys_on_startup,
-        register_at_prs_on_startup=conf.register_at_prs_on_startup,
+        register_prs_on_startup=conf.register_prs_on_startup,
         telemetry_enabled=cfg.telemetry.enabled,
         stats_enabled=cfg.stats.enabled,
     )

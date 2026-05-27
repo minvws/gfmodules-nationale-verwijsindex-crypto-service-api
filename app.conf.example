@@ -10,7 +10,7 @@ hashing_key_id=abcdef1234567890
 # Whether to generate keys on startup if they do not exist
 generate_keys_on_startup = False
 # Whether to register the NVI at the PRS on startup
-register_at_prs_on_startup = False
+register_prs_on_startup = False
 # Whether to suppress urllib3 InsecureRequestWarning
 allow_insecure_requests = False
 

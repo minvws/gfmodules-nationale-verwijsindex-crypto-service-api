@@ -28,7 +28,6 @@ class ConfigApp(BaseModel):
     hashing_key_id: str
     generate_keys_on_startup: bool = Field(default=False)
     register_prs_on_startup: bool = Field(default=False)
-    register_at_prs_on_startup: bool = Field(default=False)
     allow_insecure_requests: bool = Field(default=False)
 
 
