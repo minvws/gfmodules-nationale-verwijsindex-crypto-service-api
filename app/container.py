@@ -48,7 +48,7 @@ def container_config(binder: inject.Binder) -> None:
     prs_registration_service = PrsRegistrationService(
         nvi_ura_number=config.app.nvi_ura_number,
         config=config.pseudonym_api,
-        register_app=config.app.register_prs_on_startup,
+        register_app=config.pseudonym_api.register_at_prs_on_startup,
         client_oauth_service=prs_oauth_service,
     )
     binder.bind(PrsRegistrationService, prs_registration_service)

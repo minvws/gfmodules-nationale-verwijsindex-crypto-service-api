@@ -14,7 +14,7 @@ import uvicorn
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
-from app.config import ConfigApp, get_config
+from app.config import ConfigApp, ConfigPseudonymApi, get_config
 from app.container import get_crypto_service, get_prs_registration_service
 from app.logging.config_builder import LogConfigBuilder
 from app.logging.events import (
@@ -69,11 +69,11 @@ def create_fastapi_app() -> FastAPI:
     application_init()
     try:
         fastapi = setup_fastapi()
-        conf = get_config().app
-        pub_key = generate_keys_on_startup(conf)
+        config = get_config()
+        pub_key = generate_keys_on_startup(config.app)
         if pub_key:
-            register_at_prs(conf, pub_key)
-        _emit_app_started(conf)
+            register_at_prs(config.pseudonym_api, pub_key)
+        _emit_app_started(config.app)
         return fastapi
     except Exception as exc:
         log_event(
@@ -87,7 +87,7 @@ def create_fastapi_app() -> FastAPI:
         raise
 
 
-def register_at_prs(conf: ConfigApp, pub_key: str) -> None:
+def register_at_prs(conf: ConfigPseudonymApi, pub_key: str) -> None:
     if conf.register_at_prs_on_startup:
         prs_registration_service = get_prs_registration_service()
         prs_registration_service.register_nvi_at_prs(pub_key)
@@ -218,7 +218,7 @@ def _emit_app_started(conf: ConfigApp) -> None:
         config_path=os.environ.get(_CONFIG_ENV, _DEFAULT_CONFIG_PATH),
         mock_hsm=cfg.hsm_api.mock,
         generate_keys_on_startup=conf.generate_keys_on_startup,
-        register_at_prs_on_startup=conf.register_at_prs_on_startup,
+        register_at_prs_on_startup=cfg.pseudonym_api.register_at_prs_on_startup,
         telemetry_enabled=cfg.telemetry.enabled,
         stats_enabled=cfg.stats.enabled,
     )
