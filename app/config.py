@@ -27,7 +27,6 @@ class ConfigApp(BaseModel):
     key_id: str
     hashing_key_id: str
     generate_keys_on_startup: bool = Field(default=False)
-    register_prs_on_startup: bool = Field(default=False)
     allow_insecure_requests: bool = Field(default=False)
 
 
@@ -55,6 +54,7 @@ class ConfigHsmApi(BaseModel):
 
 
 class ConfigPseudonymApi(BaseModel):
+    register_at_prs_on_startup: bool = Field(default=False)
     endpoint: str
     timeout: int = Field(default=30, gt=0)
     mtls_cert: str | None = None

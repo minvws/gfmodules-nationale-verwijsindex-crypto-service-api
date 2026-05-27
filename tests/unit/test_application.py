@@ -21,11 +21,11 @@ from app.logging.events import (
 def test_register_at_prs_skips_when_disabled(
     use_config: Config, mocker: MockerFixture
 ) -> None:
-    use_config.app.register_prs_on_startup = False
+    use_config.pseudonym_api.register_at_prs_on_startup = False
 
     factory = mocker.patch("app.application.get_prs_registration_service")
 
-    application.register_at_prs(use_config.app, "PEM")
+    application.register_at_prs(use_config.pseudonym_api, "PEM")
 
     factory.assert_not_called()
 
@@ -33,11 +33,11 @@ def test_register_at_prs_skips_when_disabled(
 def test_register_at_prs_calls_service_when_enabled(
     use_config: Config, mocker: MockerFixture
 ) -> None:
-    use_config.app.register_prs_on_startup = True
+    use_config.pseudonym_api.register_at_prs_on_startup = True
     prs = MagicMock()
     mocker.patch("app.application.get_prs_registration_service", return_value=prs)
 
-    application.register_at_prs(use_config.app, "PEM")
+    application.register_at_prs(use_config.pseudonym_api, "PEM")
 
     prs.register_nvi_at_prs.assert_called_once_with("PEM")
 
@@ -169,7 +169,7 @@ def test_emit_app_started_logs_sys_app_started(
     use_config: Config, mocker: MockerFixture
 ) -> None:
     use_config.app.generate_keys_on_startup = True
-    use_config.app.register_prs_on_startup = False
+    use_config.pseudonym_api.register_at_prs_on_startup = False
     mocker.patch("app.application._read_version", return_value="1.2.3")
     log_event = mocker.patch("app.application.log_event")
 
@@ -183,7 +183,7 @@ def test_emit_app_started_logs_sys_app_started(
         config_path=mocker.ANY,
         mock_hsm=use_config.hsm_api.mock,
         generate_keys_on_startup=True,
-        register_prs_on_startup=False,
+        register_at_prs_on_startup=False,
         telemetry_enabled=use_config.telemetry.enabled,
         stats_enabled=use_config.stats.enabled,
     )
