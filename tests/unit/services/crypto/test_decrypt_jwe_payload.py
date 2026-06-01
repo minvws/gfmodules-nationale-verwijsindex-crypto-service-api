@@ -23,8 +23,36 @@ class _MockCryptoService(MockCryptoService):
         return CryptoService.decrypt_jwe_payload(self, jwe_token)
 
 
-def _make_real_jwe(payload: bytes, kid: str | None = "k1") -> Any:
-    key = jwk.JWK.generate(kty="RSA", size=2048)
+class _LocalCryptoService(CryptoService):
+    def __init__(self, keys: dict[str, jwk.JWK]) -> None:
+        self._keys = keys
+
+    def health_check(self) -> bool:
+        return True
+
+    def get_public_key(self, key_id: str) -> str:
+        return (
+            self._keys[key_id].export_to_pem(private_key=False, password=None).decode()
+        )
+
+    def decrypt_jwe(self, jwe_token: str, key_id: str) -> bytes:
+        key = self._keys[key_id]
+        token = jwe.JWE()
+        token.deserialize(jwe_token)
+        token.decrypt(key)
+        return token.payload
+
+    def generate_keys(self) -> None:
+        return None
+
+    def hash(self, data: bytes) -> bytes:
+        return data
+
+
+def _make_real_jwe(
+    payload: bytes, kid: str | None = "k1", key: jwk.JWK | None = None
+) -> str:
+    key = key or jwk.JWK.generate(kty="RSA", size=2048)
     header: dict[str, str] = {"alg": "RSA-OAEP-256", "enc": "A256GCM"}
     if kid is not None:
         header["kid"] = kid
@@ -64,3 +92,15 @@ def test_decrypt_jwe_payload_wraps_unexpected_errors() -> None:
     svc = _MockCryptoService(plaintext=RuntimeError("boom"))
     with pytest.raises(CryptoError):
         svc.decrypt_jwe_payload(_make_real_jwe(b'{"x":1}'))
+
+
+def test_decrypt_jwe_payload_with_real_decryption_round_trip() -> None:
+    kid = "k1"
+    key = jwk.JWK.generate(kty="RSA", size=2048)
+    plaintext = json.dumps({"subject": "pseudonym:eval:real"}).encode()
+    token = _make_real_jwe(plaintext, kid=kid, key=key.public())
+    svc = _LocalCryptoService(keys={kid: key})
+
+    out = svc.decrypt_jwe_payload(token)
+
+    assert out == {"subject": "pseudonym:eval:real"}
