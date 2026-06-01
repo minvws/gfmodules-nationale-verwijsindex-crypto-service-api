@@ -2,21 +2,19 @@
 # syntax directive is used to enable Docker BuildKit
 
 ARG PYTHON_VERSION=3.14
-ARG DEV=false
-ARG PROJECT_DIR=/src
-ARG APP_USER=app
-ARG APP_GROUP=app
-
+ 
 FROM python:${PYTHON_VERSION}-slim AS base
 
-ARG PROJECT_DIR
-ARG APP_USER
-ARG APP_GROUP
+ARG PROJECT_DIR="/src"
+ARG VIRTUAL_ENV_PATH="/opt/app/docker-venv"
+ARG APP_USER="app"
+ARG APP_GROUP="app"
 ARG NEW_UID
 ARG NEW_GID
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
     POETRY_VERSION=2.3.4
 
 # Create a non-privileged user and install runtime dependencies.
@@ -27,20 +25,18 @@ RUN groupadd --system "${APP_GROUP}" --gid="${NEW_GID}" && \
         --uid "${NEW_UID}" \
         --gid "${NEW_GID}" \
         "${APP_USER}" && \
-        apt-get update && \
-        apt-get install -y --no-install-recommends \
-        libsodium23 \
+    apt-get update && \
+    apt-get install -y --no-install-recommends \
+        curl \
         libssl3 \
+        libsodium23 \
         openssl \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR ${PROJECT_DIR}
 
-# Builder stage for compilation and dependencies
-FROM base AS builder
-
-ARG DEV
-ARG PROJECT_DIR
+# Builder base stage for compilation and dependency installation
+FROM base AS builder-base
 
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt,sharing=locked \
@@ -54,8 +50,8 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
         pkg-config \
     && rm -rf /var/lib/apt/lists/*
 
-# Install poetry
 RUN --mount=type=cache,target=/root/.cache/pip \
+    python -m venv "${VIRTUAL_ENV_PATH}" && \
     pip install --upgrade pip && \
     pip install "poetry==${POETRY_VERSION}"
 
@@ -70,57 +66,60 @@ WORKDIR ${PROJECT_DIR}
 COPY ./pyproject.toml ./poetry.lock ./
 
 ENV POETRY_CACHE_DIR=/tmp/poetry-cache \
-    POETRY_VIRTUALENVS_CREATE=true \
-    POETRY_VIRTUALENVS_IN_PROJECT=true
+    POETRY_VIRTUALENVS_CREATE=false
 
-RUN --mount=type=cache,target=${POETRY_CACHE_DIR} \
-    if [ "${DEV}" = "true" ]; then \
-        poetry install --no-root --no-interaction; \
-    else \
-        poetry install --no-root --no-interaction --only main; \
-    fi
+# Production dependencies builder (main deps only)
+FROM builder-base AS builder-runtime
 
-# Final stage
-FROM base AS final
-
-ARG DEV
-ARG PROJECT_DIR
-ARG APP_USER
-ARG APP_GROUP
-
-# Copy compiled libraries
-COPY --from=builder /liboprf/src/noise_xk/lib*.so /usr/local/lib/
-COPY --from=builder /liboprf/src/lib*.so /usr/local/lib/
-RUN ldconfig
-
-# Set different virtualenv path for runtime to avoid issues when mounting source code
-ENV VIRTUAL_ENV="/opt/app/docker-venv"
+ARG VIRTUAL_ENV_PATH
+ENV VIRTUAL_ENV="${VIRTUAL_ENV_PATH}"
 ENV PATH="${VIRTUAL_ENV}/bin:$PATH"
 
-# Copy only the virtualenv — no pip, no poetry, no build tools
-COPY --from=builder --chown=${APP_USER}:${APP_GROUP} /src/.venv ${VIRTUAL_ENV}
+RUN --mount=type=cache,target="${POETRY_CACHE_DIR}" \
+    poetry install --no-root --no-interaction --only main
 
-# Optionally install poetry for local development images
-RUN if [ "${DEV}" = "true" ]; then \
-    pip install --no-cache-dir poetry=="${POETRY_VERSION}"; \
-  fi
+# Development dependencies builder (full deps, poetry available)
+FROM builder-base AS builder-dev
+
+ARG VIRTUAL_ENV_PATH
+ENV VIRTUAL_ENV="${VIRTUAL_ENV_PATH}"
+ENV PATH="${VIRTUAL_ENV}/bin:$PATH"
+
+RUN --mount=type=cache,target="${POETRY_CACHE_DIR}" \
+    poetry install --no-root --no-interaction
+
+# Production runtime stage
+FROM base AS runtime
+
+ARG VIRTUAL_ENV_PATH
+ARG RELEASE_VERSION=dev
+ARG GIT_SHA=unknown
+ARG standalone=false
+
+# Copy compiled libraries
+COPY --from=builder-runtime /liboprf/src/noise_xk/lib*.so /usr/local/lib/
+COPY --from=builder-runtime /liboprf/src/lib*.so /usr/local/lib/
+RUN ldconfig
+
+# Reuse the same virtualenv path from builder in runtime
+ENV VIRTUAL_ENV="${VIRTUAL_ENV_PATH}"
+ENV PATH="${VIRTUAL_ENV}/bin:$PATH" \
+    PYTHONPATH="${PROJECT_DIR}"
+
+# Copy only the virtualenv — no pip, no build tools
+COPY --from=builder-runtime --chown=${APP_USER}:${APP_GROUP} ${VIRTUAL_ENV} ${VIRTUAL_ENV}
 
 # Copy only what the app needs at runtime (no tests, docs, CI artifacts, etc.)
 COPY --chown=${APP_USER}:${APP_GROUP} app/ /src/app/
+COPY --chown=${APP_USER}:${APP_GROUP} tools/ /src/tools/
 COPY --chown=${APP_USER}:${APP_GROUP} app.conf.example /src/
-
-# version.json is generated from build args so CI workspace artifacts never leak in
-ARG RELEASE_VERSION=dev
-ARG GIT_SHA=unknown
-RUN echo "{\"version\": \"${RELEASE_VERSION}\", \"git_ref\": \"${GIT_SHA}\"}" > /src/version.json \
-    && chown "${APP_USER}:${APP_GROUP}" /src/version.json
 
 COPY --chmod=755 ./docker/init-standalone.sh /usr/local/bin/
 COPY --chmod=755 ./docker/init.sh /usr/local/bin/
 
-ARG standalone=false
-
-RUN if [ "$standalone" = "true" ] ; then \
+RUN echo "{\"version\": \"${RELEASE_VERSION}\", \"git_ref\": \"${GIT_SHA}\"}" > /src/version.json && \
+    chown "${APP_USER}:${APP_GROUP}" /src/version.json && \
+    if [ "$standalone" = "true" ] ; then \
     ln -sf /usr/local/bin/init-standalone.sh /docker-entrypoint.sh; \
   else \
     ln -sf /usr/local/bin/init.sh /docker-entrypoint.sh ; \
@@ -131,6 +130,12 @@ USER ${APP_USER}
 EXPOSE 8577
 WORKDIR ${PROJECT_DIR}
 
-ENV PYTHONPATH=${PROJECT_DIR}
-
 ENTRYPOINT ["/docker-entrypoint.sh"]
+
+# Development runtime stage (extends production runtime)
+FROM runtime AS dev
+COPY --from=builder-dev --chown=${APP_USER}:${APP_GROUP} ${VIRTUAL_ENV} ${VIRTUAL_ENV}
+RUN "${VIRTUAL_ENV}/bin/pip" install "poetry==${POETRY_VERSION}"
+
+# Backward-compatible default final target
+FROM runtime AS final
