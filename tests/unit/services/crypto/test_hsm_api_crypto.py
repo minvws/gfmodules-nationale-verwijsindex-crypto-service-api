@@ -6,6 +6,10 @@ from unittest.mock import MagicMock
 
 import pytest
 from Crypto.Cipher import AES
+from Crypto.Cipher import PKCS1_OAEP
+from Crypto.Hash import SHA256
+from Crypto.PublicKey import RSA
+from jwcrypto import jwe, jwk
 from pytest_mock import MockerFixture
 from requests.exceptions import ConnectionError as RequestsConnectionError, Timeout
 
@@ -51,6 +55,25 @@ def _make_jwe(cek: bytes, plaintext: bytes, alg: str = "RSA-OAEP-256", enc: str 
         [header_b64, _b64u_nopad(encrypted_key), _b64u_nopad(iv), _b64u_nopad(ct), _b64u_nopad(tag)]
     )
     return token, encrypted_key
+
+
+def _create_real_jwe_compact(plaintext: bytes, key: jwk.JWK, kid: str = "sk") -> str:
+    header = {"alg": "RSA-OAEP-256", "enc": "A256GCM", "kid": kid}
+    token = jwe.JWE(plaintext, json.dumps(header))
+    token.add_recipient(key)
+    return token.serialize(compact=True)
+
+
+def _unwrap_cek_from_real_jwe(compact_jwe: str, key: jwk.JWK) -> bytes:
+    _header_b64, encrypted_key_b64, _iv_b64, _ciphertext_b64, _tag_b64 = (
+        compact_jwe.split(".")
+    )
+    encrypted_key = base64.urlsafe_b64decode(encrypted_key_b64 + "==")
+
+    private_pem = key.export_to_pem(private_key=True, password=None)
+    rsa_key = RSA.import_key(private_pem)
+    unwrap = PKCS1_OAEP.new(rsa_key, hashAlgo=SHA256)
+    return unwrap.decrypt(encrypted_key)
 
 
 def test_health_check_returns_true_on_200(service: HsmApiCryptoService, http_mock: MagicMock) -> None:
@@ -118,6 +141,17 @@ def test_decrypt_jwe_round_trip(service: HsmApiCryptoService, http_mock: MagicMo
     assert call.kwargs["sub_route"] == "hsm/m/s/decrypt"
     assert call.kwargs["data"]["mechanism"] == "RSA_PKCS_OAEP"
     assert call.kwargs["data"]["hashmethod"] == "sha256"
+
+
+def test_decrypt_jwe_round_trip_with_real_jwe(service: HsmApiCryptoService, http_mock: MagicMock) -> None:
+    key = jwk.JWK.generate(kty="RSA", size=2048)
+    token = _create_real_jwe_compact(b"plaintext", key.public())
+    cek = _unwrap_cek_from_real_jwe(token, key)
+    http_mock.do_request.return_value = _resp(
+        200, {"result": base64.b64encode(cek).decode()}
+    )
+
+    assert service.decrypt_jwe(token, "sk") == b"plaintext"
 
 
 def test_decrypt_jwe_rejects_malformed_compact_serialization(service: HsmApiCryptoService) -> None:
