@@ -13,7 +13,7 @@ class _MockCryptoService(MockCryptoService):
     def __init__(self, plaintext: bytes | Exception | None = None) -> None:
         self._plaintext = plaintext
 
-    def decrypt_jwe(self, jwe_token: str, key_id: str) -> bytes:
+    def decrypt_jwe(self, jwe_token: str) -> bytes:
         if isinstance(self._plaintext, Exception):
             raise self._plaintext
         assert self._plaintext is not None
@@ -24,19 +24,17 @@ class _MockCryptoService(MockCryptoService):
 
 
 class LocalCryptoService(CryptoService):
-    def __init__(self, keys: dict[str, jwk.JWK]) -> None:
-        self._keys = keys
+    def __init__(self, key: jwk.JWK) -> None:
+        self._key = key
 
     def health_check(self) -> bool:
         return True
 
     def get_public_key(self, key_id: str) -> str:
-        return (
-            self._keys[key_id].export_to_pem(private_key=False, password=None).decode()
-        )
+        return self._key.export_to_pem(private_key=False, password=None).decode()
 
-    def decrypt_jwe(self, jwe_token: str, key_id: str) -> bytes:
-        key = self._keys[key_id]
+    def decrypt_jwe(self, jwe_token: str) -> bytes:
+        key = self._key
         token = jwe.JWE()
         token.deserialize(jwe_token)
         token.decrypt(key)
@@ -70,10 +68,11 @@ def test_decrypt_jwe_payload_returns_parsed_json() -> None:
     assert out == {"subject": "pseudonym:eval:abc"}
 
 
-def test_decrypt_jwe_payload_raises_on_missing_kid() -> None:
+def test_decrypt_jwe_payload_succeeds_without_kid() -> None:
     svc = _MockCryptoService(plaintext=b'{"subject": "x"}')
-    with pytest.raises(InvalidJweError):
-        svc.decrypt_jwe_payload(_make_test_jwe(b'{"subject": "x"}', kid=None))
+    payload = svc.decrypt_jwe_payload(_make_test_jwe(b'{"subject": "x"}', kid=None))
+
+    assert payload == {"subject": "x"}
 
 
 def test_decrypt_jwe_payload_wraps_invalid_compact_serialization() -> None:
@@ -95,11 +94,10 @@ def test_decrypt_jwe_payload_wraps_unexpected_errors() -> None:
 
 
 def test_decrypt_jwe_payload_with_real_decryption_round_trip() -> None:
-    kid = "k1"
     key = jwk.JWK.generate(kty="RSA", size=2048)
     plaintext = json.dumps({"subject": "pseudonym:eval:real"}).encode()
-    token = _make_test_jwe(plaintext, kid=kid, key=key.public())
-    svc = LocalCryptoService(keys={kid: key})
+    token = _make_test_jwe(plaintext, kid="k1", key=key.public())
+    svc = LocalCryptoService(key)
 
     out = svc.decrypt_jwe_payload(token)
 

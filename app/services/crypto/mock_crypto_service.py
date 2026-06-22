@@ -25,7 +25,7 @@ class MockCryptoService(CryptoService):
     def generate_keys(self) -> None:
         return None
 
-    def decrypt_jwe(self, jwe_token: str, key_id: str) -> bytes:
+    def decrypt_jwe(self, jwe_token: str) -> bytes:
         return jwe_token.encode("utf-8")
 
     def decrypt_jwe_payload(self, jwe_token: str) -> Any:

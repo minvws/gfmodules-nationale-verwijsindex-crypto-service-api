@@ -34,7 +34,7 @@ def service(http_mock: MagicMock) -> HsmApiCryptoService:
         module="m",
         slot="s",
         hash_key_id="hk",
-        signing_key_id="sk",
+        encryption_key_label="sk",
         support_sha1=False,
     )
 
@@ -90,7 +90,9 @@ def test_health_check_returns_false_on_failure(
     side_effect_or_status: Any, service: HsmApiCryptoService, http_mock: MagicMock
 ) -> None:
     if isinstance(side_effect_or_status, int):
-        http_mock.do_request.return_value = _resp(side_effect_or_status, {"message": "x"})
+        http_mock.do_request.return_value = _resp(
+            side_effect_or_status, {"message": "x"}
+        )
     else:
         http_mock.do_request.side_effect = side_effect_or_status
     assert service.health_check() is False
@@ -136,7 +138,7 @@ def test_decrypt_jwe_round_trip(service: HsmApiCryptoService, http_mock: MagicMo
         200, {"result": base64.b64encode(cek).decode()}
     )
 
-    assert service.decrypt_jwe(token, "sk") == b"plaintext"
+    assert service.decrypt_jwe(token) == b"plaintext"
     call = http_mock.do_request.call_args
     assert call.kwargs["sub_route"] == "hsm/m/s/decrypt"
     assert call.kwargs["data"]["mechanism"] == "RSA_PKCS_OAEP"
@@ -151,12 +153,12 @@ def test_decrypt_jwe_round_trip_with_real_jwe(service: HsmApiCryptoService, http
         200, {"result": base64.b64encode(cek).decode()}
     )
 
-    assert service.decrypt_jwe(token, "sk") == b"plaintext"
+    assert service.decrypt_jwe(token) == b"plaintext"
 
 
 def test_decrypt_jwe_rejects_malformed_compact_serialization(service: HsmApiCryptoService) -> None:
     with pytest.raises(InvalidJweError):
-        service.decrypt_jwe("only.three.parts", "sk")
+        service.decrypt_jwe("only.three.parts")
 
 
 @pytest.mark.parametrize(
@@ -173,30 +175,44 @@ def test_decrypt_jwe_validates_header_fields(
     alg: str, enc: str, support_sha1: bool, err: type[Exception], http_mock: MagicMock
 ) -> None:
     svc = HsmApiCryptoService(
-        http_mock, module="m", slot="s", hash_key_id="h", signing_key_id="s", support_sha1=support_sha1
+        http_mock,
+        module="m",
+        slot="s",
+        hash_key_id="h",
+        encryption_key_label="s",
+        support_sha1=support_sha1,
     )
     cek = os.urandom(32)
     token, _ = _make_jwe(cek, b"plain", alg=alg, enc=enc)
     with pytest.raises(err):
-        svc.decrypt_jwe(token, "sk")
+        svc.decrypt_jwe(token)
 
 
 def test_decrypt_jwe_supports_sha1_when_enabled(http_mock: MagicMock) -> None:
     svc = HsmApiCryptoService(
-        http_mock, module="m", slot="s", hash_key_id="h", signing_key_id="s", support_sha1=True
+        http_mock,
+        module="m",
+        slot="s",
+        hash_key_id="h",
+        encryption_key_label="s",
+        support_sha1=True,
     )
     cek = os.urandom(32)
     token, _ = _make_jwe(cek, b"plain", alg="RSA-OAEP")
-    http_mock.do_request.return_value = _resp(200, {"result": base64.b64encode(cek).decode()})
-    assert svc.decrypt_jwe(token, "sk") == b"plain"
+    http_mock.do_request.return_value = _resp(
+        200, {"result": base64.b64encode(cek).decode()}
+    )
+    assert svc.decrypt_jwe(token) == b"plain"
 
 
 def test_decrypt_jwe_rejects_wrong_cek_length(service: HsmApiCryptoService, http_mock: MagicMock) -> None:
     cek = os.urandom(32)
     token, _ = _make_jwe(cek, b"x")
-    http_mock.do_request.return_value = _resp(200, {"result": base64.b64encode(b"short").decode()})
+    http_mock.do_request.return_value = _resp(
+        200, {"result": base64.b64encode(b"short").decode()}
+    )
     with pytest.raises(CryptoError):
-        service.decrypt_jwe(token, "sk")
+        service.decrypt_jwe(token)
 
 
 def test_decrypt_jwe_unwrap_failure_raises(service: HsmApiCryptoService, http_mock: MagicMock) -> None:
@@ -204,7 +220,7 @@ def test_decrypt_jwe_unwrap_failure_raises(service: HsmApiCryptoService, http_mo
     token, _ = _make_jwe(cek, b"x")
     http_mock.do_request.return_value = _resp(500, text="boom")
     with pytest.raises(CryptoError):
-        service.decrypt_jwe(token, "sk")
+        service.decrypt_jwe(token)
 
 
 def test_generate_keys_calls_rsa_and_secret_endpoints(

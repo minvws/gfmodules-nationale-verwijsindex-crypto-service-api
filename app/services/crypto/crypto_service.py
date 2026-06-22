@@ -30,9 +30,9 @@ class CryptoService(ABC):
         """
 
     @abstractmethod
-    def decrypt_jwe(self, jwe_token: str, key_id: str) -> bytes:
+    def decrypt_jwe(self, jwe_token: str) -> bytes:
         """
-        Decrypt a JWE using the RSA private key identified by key_id.
+        Decrypt a JWE using the configured RSA private key.
         Returns the plaintext payload as raw bytes.
         """
 
@@ -51,18 +51,12 @@ class CryptoService(ABC):
     def decrypt_jwe_payload(self, jwe_token: str) -> Any:
         """
         Decrypt a JWE and return the parsed JSON payload.
-        Extracts the key ID (kid) from the JWE header and uses it to decrypt.
         """
         try:
-            # Extract kid from JWE header
             token = jwe.JWE()
             token.deserialize(jwe_token)
-            kid = token.jose_header.get("kid")
-            if not kid:
-                raise InvalidJweError("Invalid JWE: missing kid in header")
 
-            # Decrypt and parse
-            payload = self.decrypt_jwe(jwe_token, kid)
+            payload = self.decrypt_jwe(jwe_token)
             return json.loads(payload.decode("utf-8"))
         except (jwe.InvalidJWEData, InvalidJweError) as e:
             logger.debug("JWE decrypt failed: invalid JWE", exc_info=e)

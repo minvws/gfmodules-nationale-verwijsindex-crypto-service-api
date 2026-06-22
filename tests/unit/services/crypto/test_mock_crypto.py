@@ -14,7 +14,7 @@ def test_generate_keys_returns_none() -> None:
 
 
 def test_decrypt_jwe_round_trips_input() -> None:
-    assert MockCryptoService().decrypt_jwe("token", "kid") == b"token"
+    assert MockCryptoService().decrypt_jwe("token") == b"token"
 
 
 def test_decrypt_jwe_payload_returns_canned_subject() -> None:

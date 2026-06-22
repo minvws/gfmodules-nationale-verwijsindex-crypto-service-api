@@ -21,8 +21,8 @@ class HsmApiCryptoService(CryptoService):
         module: str,
         slot: str,
         hash_key_id: str,
-        signing_key_id: str,
-        support_sha1: bool = False
+        encryption_key_label: str,
+        support_sha1: bool = False,
     ):
         logger.debug(f"Initializing HSM API service: module={module}, slot={slot}")
         self._http = http
@@ -30,7 +30,7 @@ class HsmApiCryptoService(CryptoService):
         self.slot = slot
         self.support_sha1 = support_sha1
         self.hash_key_id = hash_key_id
-        self.signing_key_id = signing_key_id
+        self.encryption_key_label = encryption_key_label
         self.public_key: str | None = None
 
     def health_check(self) -> bool:
@@ -66,9 +66,11 @@ class HsmApiCryptoService(CryptoService):
             raise KeyNotFoundError(f"Public key not found in response: {r.text}")
         return self.public_key
 
-    def decrypt_jwe(self, jwe_token: str, key_id: str) -> bytes:
+    def decrypt_jwe(self, jwe_token: str) -> bytes:
         """Decrypt RSA-OAEP(+A256GCM) JWE: unwrap CEK in HSM, decrypt locally."""
-        logger.debug(f"Decrypting JWE with key {key_id} using HSM API")
+        logger.debug(
+            f"Decrypting JWE with key {self.encryption_key_label} using HSM API"
+        )
         parts = jwe_token.split(".")
         if len(parts) != 5:
             raise InvalidJweError("Invalid JWE compact serialization")
@@ -91,7 +93,9 @@ class HsmApiCryptoService(CryptoService):
         if not hashmethod:
             raise InvalidJweError(f"Unsupported key management algorithm: {alg}")
         encrypted_key = base64.urlsafe_b64decode(encrypted_key_b64 + "==")
-        cek = self._rsa_oaep_unwrap(key_id, encrypted_key, hashmethod)
+        cek = self._rsa_oaep_unwrap(
+            self.encryption_key_label, encrypted_key, hashmethod
+        )
 
         if len(cek) != 32:  # 256 bits for A256GCM
             raise CryptoError(f"Unwrapped CEK length {len(cek)} does not match {enc}")
@@ -106,7 +110,11 @@ class HsmApiCryptoService(CryptoService):
         return cipher.decrypt_and_verify(ciphertext, tag)
 
     def generate_keys(self) -> None:
-        logger.debug(f"Generating keys: signing_key_id={self.signing_key_id}, hashing_key_id={self.hash_key_id}")
+        logger.debug(
+            "Generating keys: "
+            f"encryption_key_label={self.encryption_key_label}, "
+            f"hashing_key_id={self.hash_key_id}"
+        )
         self._generate_signing_key()
         self._generate_hashing_key()
 
@@ -127,12 +135,14 @@ class HsmApiCryptoService(CryptoService):
             return base64.b64decode(r.json()["result"]["data"])
         except (KeyError, TypeError, JSONDecodeError):
             raise CryptoError(f"Unexpected HMAC response: {r.text}")
-        
+
     def _parse_key_pair_result(self, r: Response) -> str:
         if r.status_code == 409 or "already exists" in r.text:
-            return self.get_public_key(self.signing_key_id)
+            return self.get_public_key(self.encryption_key_label)
         if r.status_code != 200:
-            logger.debug(f"HSM RSA key-pair generation failed: status={r.status_code} body={r.text}")
+            logger.debug(
+                f"HSM RSA key-pair generation failed: status={r.status_code} body={r.text}"
+            )
             log_event(
                 logger,
                 SYS_CRYPTO_FAILED,
@@ -141,12 +151,17 @@ class HsmApiCryptoService(CryptoService):
                 error_reason=f"hsm_status_{r.status_code}",
                 retry_attempt=0,
             )
-            raise CryptoError(f"Failed to generate RSA key pair: status {r.status_code}")
+            raise CryptoError(
+                f"Failed to generate RSA key pair: status {r.status_code}"
+            )
         try:
             data = r.json()
             result = data.get("result", [])
             for obj in result:
-                if obj.get("LABEL") == self.signing_key_id and obj.get("CLASS") == "PUBLIC_KEY":
+                if (
+                    obj.get("LABEL") == self.encryption_key_label
+                    and obj.get("CLASS") == "PUBLIC_KEY"
+                ):
                     public_key = obj.get("publickey")
                     if isinstance(public_key, str) and public_key:
                         return public_key
@@ -155,12 +170,12 @@ class HsmApiCryptoService(CryptoService):
             raise CryptoError(f"Unexpected response from generate/rsa: {r.text}")
 
     def _generate_signing_key(self) -> str:
-        """Generate the signing RSA key and return its public key."""
-        logger.debug(f"Generating signing key: {self.signing_key_id}")
+        """Generate the RSA key used for JWE encryption/decryption."""
+        logger.debug(f"Generating encryption key: {self.encryption_key_label}")
         r = self._http.do_request(
             "POST",
             sub_route=f"hsm/{self.module}/{self.slot}/generate/rsa",
-            data={"label": self.signing_key_id, "bits": 2048},
+            data={"label": self.encryption_key_label, "bits": 2048},
         )
         return self._parse_key_pair_result(r)
 
@@ -175,8 +190,9 @@ class HsmApiCryptoService(CryptoService):
         if r.status_code not in (200, 409) and "already exists" not in r.text:
             raise CryptoError(f"Failed to generate hashing key: {r.text}")
 
-
-    def _rsa_oaep_unwrap(self, key_id: str, encrypted_key: bytes, hashmethod: str) -> bytes:
+    def _rsa_oaep_unwrap(
+        self, key_id: str, encrypted_key: bytes, hashmethod: str
+    ) -> bytes:
         logger.debug(f"Unwrapping CEK with RSA-OAEP using key {key_id}")
         r = self._http.do_request(
             "POST",
@@ -195,4 +211,3 @@ class HsmApiCryptoService(CryptoService):
             return base64.b64decode(r.json()["result"])
         except (KeyError, TypeError, JSONDecodeError):
             raise CryptoError(f"Unexpected decrypt response: {r.text}")
-        
