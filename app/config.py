@@ -51,14 +51,6 @@ class ConfigHsmApi(BaseModel):
     )  # @TODO remove this when HSM-API supports SHA-256
 
 
-class ConfigPseudonymApi(BaseModel):
-    endpoint: str
-    timeout: int = Field(default=30, gt=0)
-    mtls_cert: str | None = None
-    mtls_key: str | None = None
-    verify_ca: str | bool = Field(default=True)
-
-
 class ConfigTelemetry(BaseModel):
     enabled: bool = Field(default=False)
     endpoint: str | None = None
@@ -91,7 +83,6 @@ class Config(BaseModel):
     uvicorn: ConfigUvicorn
     telemetry: ConfigTelemetry
     stats: ConfigStats
-    pseudonym_api: ConfigPseudonymApi
     hsm_api: ConfigHsmApi
     logging: ConfigLogging = Field(default_factory=ConfigLogging)
 

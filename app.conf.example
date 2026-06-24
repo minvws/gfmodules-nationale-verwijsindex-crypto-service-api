@@ -23,13 +23,6 @@ include_traces = True
 # Whether to display debug logs in the console
 debug_logs_in_console = True
 
-[pseudonym_api]
-endpoint = https://localhost:8000
-timeout = 30
-mtls_cert = /path/to/cert.pem
-mtls_key = /path/to/key.pem
-verify_ca = /path/to/ca.pem
-
 [hsm_api]
 # If true, use a pass-through mock instead of calling the HSM API
 mock = True
