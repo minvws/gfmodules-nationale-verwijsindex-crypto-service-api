@@ -42,9 +42,6 @@ class LocalCryptoService(CryptoService):
         token.decrypt(key)
         return token.payload
 
-    def generate_keys(self) -> None:
-        return None
-
     def hash(self, data: bytes) -> bytes:
         return data
 

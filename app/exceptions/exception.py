@@ -1,7 +1,3 @@
-class PrsRegisterError(Exception):
-    pass
-
-
 class CryptoError(Exception):
     status_code = 500
     error_message = "Crypto operation failed"

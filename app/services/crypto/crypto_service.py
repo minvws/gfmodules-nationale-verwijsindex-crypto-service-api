@@ -37,12 +37,6 @@ class CryptoService(ABC):
         """
 
     @abstractmethod
-    def generate_keys(self) -> None:
-        """
-        Generate the signing and hashing keys if they do not already exist.
-        """
-
-    @abstractmethod
     def hash(self, data: bytes) -> bytes:
         """
         Compute a hash of data. Returns raw bytes.

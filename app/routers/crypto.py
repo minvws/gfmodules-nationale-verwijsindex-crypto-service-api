@@ -5,7 +5,6 @@ from fastapi import APIRouter, Body, Depends
 from fastapi.responses import JSONResponse
 
 from app import container
-from app.config import get_config
 from app.exceptions.exception import CryptoError
 from app.models.pseudonym import PseudonymRequest
 from app.services.crypto.crypto_service import CryptoService
@@ -15,13 +14,21 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
-@router.get("/test/public_key", summary="Return the NVI public key as PEM")
+@router.get("/test/public_key/{key_id}", summary="Return the NVI public key as PEM")
 def public_key(
+    key_id: str,
     crypto_service: Annotated[CryptoService, Depends(container.get_crypto_service)],
 ) -> JSONResponse:
-    key_id = get_config().app.key_id
+    try:
+        pem = crypto_service.get_public_key(key_id)
+    except CryptoError as e:
+        logger.error(f"CryptoError occurred: {e.error_message}")
+        return JSONResponse(
+            content={"error": e.error_message}, status_code=e.status_code
+        )
+
     return JSONResponse(
-        content={"kid": key_id, "pem": crypto_service.get_public_key(key_id)}
+        content={"kid": key_id, "pem": pem}
     )
 
 

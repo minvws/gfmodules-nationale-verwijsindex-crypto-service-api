@@ -14,15 +14,12 @@ import uvicorn
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
-from app.config import ConfigApp, ConfigPseudonymApi, get_config
-from app.container import get_crypto_service, get_prs_registration_service
+from app.config import ConfigApp, get_config
 from app.logging.config_builder import LogConfigBuilder
 from app.logging.events import (
-    HEALTH_UNHEALTHY,
     SYS_APP_CRASHED,
     SYS_APP_STARTED,
     SYS_APP_STOPPED,
-    SYS_CRYPTO_FAILED,
     SYS_UNHANDLED_EXCEPTION,
     log_event,
 )
@@ -70,9 +67,6 @@ def create_fastapi_app() -> FastAPI:
     try:
         fastapi = setup_fastapi()
         config = get_config()
-        pub_key = generate_keys_on_startup(config.app)
-        if pub_key:
-            register_at_prs(config.pseudonym_api, pub_key)
         _emit_app_started(config.app)
         return fastapi
     except Exception as exc:
@@ -85,42 +79,6 @@ def create_fastapi_app() -> FastAPI:
             startup_phase="create_fastapi_app",
         )
         raise
-
-
-def register_at_prs(conf: ConfigPseudonymApi, pub_key: str) -> None:
-    if conf.register_at_prs_on_startup:
-        prs_registration_service = get_prs_registration_service()
-        prs_registration_service.register_nvi_at_prs(pub_key)
-
-
-def generate_keys_on_startup(conf: ConfigApp) -> str:
-    crypto_service = get_crypto_service()
-    try:
-        if conf.generate_keys_on_startup:
-            if not crypto_service.health_check():
-                log_event(
-                    logger,
-                    HEALTH_UNHEALTHY,
-                    "HSM unhealthy at startup, skipping key generation",
-                    unhealthy_component="hsm_api",
-                    status="error",
-                    error_detail="health_check returned false",
-                )
-                return ""
-            logger.debug("Generating keys on startup")
-            crypto_service.generate_keys()
-        return crypto_service.get_public_key(conf.key_id)
-    except Exception as e:
-        logger.debug("Startup crypto operation failed", exc_info=e)
-        log_event(
-            logger,
-            SYS_CRYPTO_FAILED,
-            "Startup crypto operation failed, app will serve but is unhealthy",
-            operation_type="startup_key_setup",
-            error_reason=type(e).__name__,
-            retry_attempt=0,
-        )
-        return ""
 
 
 _shutdown_reason: str = "graceful"
@@ -217,8 +175,6 @@ def _emit_app_started(conf: ConfigApp) -> None:
         version=_read_version(),
         config_path=os.environ.get(_CONFIG_ENV, _DEFAULT_CONFIG_PATH),
         mock_hsm=cfg.hsm_api.mock,
-        generate_keys_on_startup=conf.generate_keys_on_startup,
-        register_at_prs_on_startup=cfg.pseudonym_api.register_at_prs_on_startup,
         telemetry_enabled=cfg.telemetry.enabled,
         stats_enabled=cfg.stats.enabled,
     )

@@ -22,9 +22,6 @@ class MockCryptoService(CryptoService):
     def get_public_key(self, key_id: str) -> str:
         return "no-key"
 
-    def generate_keys(self) -> None:
-        return None
-
     def decrypt_jwe(self, jwe_token: str, key_id: str) -> bytes:
         return jwe_token.encode("utf-8")
 
