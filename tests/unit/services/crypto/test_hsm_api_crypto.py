@@ -10,12 +10,9 @@ from Crypto.Cipher import PKCS1_OAEP
 from Crypto.Hash import SHA256
 from Crypto.PublicKey import RSA
 from jwcrypto import jwe, jwk
-from pytest_mock import MockerFixture
 from requests.exceptions import ConnectionError as RequestsConnectionError, Timeout
 
 from app.exceptions.exception import CryptoError, InvalidJweError, KeyNotFoundError
-from app.logging.events import SYS_CRYPTO_FAILED
-from app.services.crypto import hsm_api_crypto_service as hsm_module
 from app.services.crypto.hsm_api_crypto_service import HsmApiCryptoService
 
 
@@ -34,7 +31,6 @@ def service(http_mock: MagicMock) -> HsmApiCryptoService:
         module="m",
         slot="s",
         hash_key_id="hk",
-        signing_key_id="sk",
         support_sha1=False,
     )
 
@@ -101,13 +97,13 @@ def test_get_public_key_returns_pem(service: HsmApiCryptoService, http_mock: Mag
     assert service.get_public_key("sk") == "PEM"
 
 
-def test_get_public_key_uses_cached_value_after_first_call(
+def test_get_public_key_fetches_per_key_id(
     service: HsmApiCryptoService, http_mock: MagicMock
 ) -> None:
     http_mock.do_request.return_value = _resp(200, {"objects": [{"publickey": "PEM"}]})
     service.get_public_key("sk")
-    service.get_public_key("sk")
-    assert http_mock.do_request.call_count == 1
+    service.get_public_key("other")
+    assert http_mock.do_request.call_count == 2
 
 
 def test_get_public_key_raises_when_not_found(service: HsmApiCryptoService, http_mock: MagicMock) -> None:
@@ -173,7 +169,7 @@ def test_decrypt_jwe_validates_header_fields(
     alg: str, enc: str, support_sha1: bool, err: type[Exception], http_mock: MagicMock
 ) -> None:
     svc = HsmApiCryptoService(
-        http_mock, module="m", slot="s", hash_key_id="h", signing_key_id="s", support_sha1=support_sha1
+        http_mock, module="m", slot="s", hash_key_id="h", support_sha1=support_sha1
     )
     cek = os.urandom(32)
     token, _ = _make_jwe(cek, b"plain", alg=alg, enc=enc)
@@ -183,7 +179,7 @@ def test_decrypt_jwe_validates_header_fields(
 
 def test_decrypt_jwe_supports_sha1_when_enabled(http_mock: MagicMock) -> None:
     svc = HsmApiCryptoService(
-        http_mock, module="m", slot="s", hash_key_id="h", signing_key_id="s", support_sha1=True
+        http_mock, module="m", slot="s", hash_key_id="h", support_sha1=True
     )
     cek = os.urandom(32)
     token, _ = _make_jwe(cek, b"plain", alg="RSA-OAEP")
@@ -205,55 +201,6 @@ def test_decrypt_jwe_unwrap_failure_raises(service: HsmApiCryptoService, http_mo
     http_mock.do_request.return_value = _resp(500, text="boom")
     with pytest.raises(CryptoError):
         service.decrypt_jwe(token, "sk")
-
-
-def test_generate_keys_calls_rsa_and_secret_endpoints(
-    service: HsmApiCryptoService, http_mock: MagicMock
-) -> None:
-    http_mock.do_request.side_effect = [
-        _resp(200, {"result": [{"LABEL": "sk", "CLASS": "PUBLIC_KEY", "publickey": "PEM"}]}),
-        _resp(200, {"result": "ok"}),
-    ]
-    service.generate_keys()
-    sub_routes = [c.kwargs["sub_route"] for c in http_mock.do_request.call_args_list]
-    assert sub_routes == ["hsm/m/s/generate/rsa", "hsm/m/s/generate/secret"]
-
-
-def test_generate_signing_key_409_falls_back_to_get_public_key(
-    service: HsmApiCryptoService, http_mock: MagicMock
-) -> None:
-    http_mock.do_request.side_effect = [
-        _resp(409, text="already exists"),
-        _resp(200, {"objects": [{"publickey": "PEM"}]}),
-        _resp(200, {"result": "ok"}),
-    ]
-    service.generate_keys()
-    assert http_mock.do_request.call_count == 3
-
-
-def test_generate_signing_key_5xx_raises(service: HsmApiCryptoService, http_mock: MagicMock) -> None:
-    http_mock.do_request.return_value = _resp(503, text="bad")
-    with pytest.raises(CryptoError):
-        service.generate_keys()
-
-
-def test_generate_signing_key_5xx_logs_sys_crypto_failed(
-    service: HsmApiCryptoService, http_mock: MagicMock, mocker: MockerFixture
-) -> None:
-    http_mock.do_request.return_value = _resp(503, text="bad")
-    log_event = mocker.patch("app.services.crypto.hsm_api_crypto_service.log_event")
-
-    with pytest.raises(CryptoError):
-        service.generate_keys()
-
-    log_event.assert_called_once_with(
-        hsm_module.logger,
-        SYS_CRYPTO_FAILED,
-        "Crypto operation failed: RSA key-pair generation",
-        operation_type="rsa_keypair_generate",
-        error_reason="hsm_status_503",
-        retry_attempt=0,
-    )
 
 
 def test_hash_returns_decoded_hmac(service: HsmApiCryptoService, http_mock: MagicMock) -> None:

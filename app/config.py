@@ -24,9 +24,7 @@ class LogLevel(str, Enum):
 class ConfigApp(BaseModel):
     loglevel: LogLevel = Field(default=LogLevel.info)
     nvi_ura_number: str
-    key_id: str
     hashing_key_id: str
-    generate_keys_on_startup: bool = Field(default=False)
     allow_insecure_requests: bool = Field(default=False)
 
 
@@ -51,23 +49,6 @@ class ConfigHsmApi(BaseModel):
     support_sha1: bool = Field(
         default=False
     )  # @TODO remove this when HSM-API supports SHA-256
-
-
-class ConfigPseudonymApi(BaseModel):
-    register_at_prs_on_startup: bool = Field(default=False)
-    endpoint: str
-    timeout: int = Field(default=30, gt=0)
-    mtls_cert: str | None = None
-    mtls_key: str | None = None
-    verify_ca: str | bool = Field(default=True)
-
-
-class ConfigPrsOAuth(BaseModel):
-    enabled: bool = Field(default=False)
-    issuer: str | None = Field(default=None)
-    mtls_cert: str | None = Field(default=None)
-    mtls_key: str | None = Field(default=None)
-    verify_ca: str | bool = Field(default=True)
 
 
 class ConfigTelemetry(BaseModel):
@@ -102,9 +83,7 @@ class Config(BaseModel):
     uvicorn: ConfigUvicorn
     telemetry: ConfigTelemetry
     stats: ConfigStats
-    pseudonym_api: ConfigPseudonymApi
     hsm_api: ConfigHsmApi
-    prs_oauth: ConfigPrsOAuth
     logging: ConfigLogging = Field(default_factory=ConfigLogging)
 
 

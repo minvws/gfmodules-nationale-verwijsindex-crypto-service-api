@@ -9,7 +9,6 @@ from fastapi.testclient import TestClient
 from app import application
 from app.config import Config
 from app.services.crypto.crypto_service import CryptoService
-from app.services.prs_registration_service import PrsRegistrationService
 from app.services.pseudonym_service import PseudonymService
 
 
@@ -19,19 +18,13 @@ def crypto_stub() -> MagicMock:
 
 
 @pytest.fixture
-def prs_stub() -> MagicMock:
-    return MagicMock(spec=PrsRegistrationService)
-
-
-@pytest.fixture
 def app(
-    use_config: Config, crypto_stub: MagicMock, prs_stub: MagicMock
+    use_config: Config, crypto_stub: MagicMock
 ) -> Iterator[FastAPI]:
     """A real FastAPI app with the production routers, talking to stubbed services."""
 
     def _bind(binder: inject.Binder) -> None:
         binder.bind(CryptoService, crypto_stub)
-        binder.bind(PrsRegistrationService, prs_stub)
         binder.bind(PseudonymService, PseudonymService(crypto_stub, "ura-1"))
 
     inject.clear_and_configure(_bind)

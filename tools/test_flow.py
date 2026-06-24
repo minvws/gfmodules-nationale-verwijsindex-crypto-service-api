@@ -20,11 +20,12 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--url", default="http://localhost:8577")
     parser.add_argument("--pseudonym", default="test-pseudonym-123")
+    parser.add_argument("--key-id", required=True, help="HSM key-id to fetch and encrypt to")
     args = parser.parse_args()
 
     # Fetch public key
-    print(f"Fetching public key from {args.url}/test/public_key")
-    key_resp = requests.get(f"{args.url}/test/public_key", timeout=10)
+    print(f"Fetching public key from {args.url}/test/public_key/{args.key_id}")
+    key_resp = requests.get(f"{args.url}/test/public_key/{args.key_id}", timeout=10)
     key_resp.raise_for_status()
     kid = key_resp.json()["kid"]
     pub_pem = key_resp.json()["pem"].encode()

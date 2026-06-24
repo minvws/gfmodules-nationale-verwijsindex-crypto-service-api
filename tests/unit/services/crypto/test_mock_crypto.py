@@ -9,10 +9,6 @@ def test_get_public_key_returns_sentinel() -> None:
     assert MockCryptoService().get_public_key("any") == "no-key"
 
 
-def test_generate_keys_returns_none() -> None:
-    MockCryptoService().generate_keys()
-
-
 def test_decrypt_jwe_round_trips_input() -> None:
     assert MockCryptoService().decrypt_jwe("token", "kid") == b"token"
 
