@@ -42,6 +42,19 @@ class CryptoService(ABC):
         Compute a hash of data. Returns raw bytes.
         """
 
+    @abstractmethod
+    def encrypt_aes(self, data: bytes, iv: bytes) -> str:
+        """
+        Encrypts a piece of data in combination with an iv.
+        """
+
+    @abstractmethod
+    def decrypt_aes(self, data: str, iv: str) -> str:
+        """
+        Decrypts a piece of data with a give IV. Function expects the params
+        to be already encoded.
+        """
+
     def decrypt_jwe_payload(self, jwe_token: str) -> Any:
         """
         Decrypt a JWE and return the parsed JSON payload.

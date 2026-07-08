@@ -25,6 +25,7 @@ class ConfigApp(BaseModel):
     loglevel: LogLevel = Field(default=LogLevel.info)
     nvi_ura_number: str
     hashing_key_id: str
+    aes_key_id: str
     allow_insecure_requests: bool = Field(default=False)
 
 

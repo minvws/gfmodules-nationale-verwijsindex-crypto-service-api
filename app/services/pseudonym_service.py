@@ -1,5 +1,6 @@
 import base64
 import logging
+from typing import Tuple
 
 import pyoprf
 
@@ -46,7 +47,9 @@ class PseudonymService:
                 endpoint=_ENDPOINT,
                 error_type="invalid_subject",
             )
-            raise InvalidJweError("JWE is invalid: subject does not start with pseudonym:eval:")
+            raise InvalidJweError(
+                "JWE is invalid: subject does not start with pseudonym:eval:"
+            )
 
         subj = base64.urlsafe_b64decode(subject.split(":")[-1])
         bf = base64.urlsafe_b64decode(blind_factor)
@@ -61,9 +64,15 @@ class PseudonymService:
         )
         return result
 
-    def hash(self, pseudonym: bytes) -> str:
+    def encrypt_pseudonym(self, pseudonym: bytes, hmac_hash: bytes) -> Tuple[str, str]:
+        iv = hmac_hash[:16]
+        logger.debug("encrypting pseudonym")
+        encrypted_data = self._crypto_service.encrypt_aes(pseudonym, iv)
+        logger.debug("Pseudonym encrypted successfully")
+        return encrypted_data, base64.urlsafe_b64encode(iv).decode()
+
+    def hash(self, pseudonym: bytes) -> bytes:
         logger.debug("Hashing pseudonym")
         hashed = self._crypto_service.hash(pseudonym)
-        res = base64.urlsafe_b64encode(hashed).decode("utf-8")
         logger.debug("Pseudonym hashed successfully")
-        return res
+        return hashed

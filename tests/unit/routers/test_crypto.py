@@ -23,18 +23,20 @@ def client(
     app.dependency_overrides.clear()
 
 
-def test_decrypt_and_hash_returns_hashed_pseudonym(
+def test_process_returns_encrypted_pseudonym_with_iv(
     client: TestClient, pseudonym_mock: MagicMock
 ) -> None:
     pseudonym_mock.decrypt_and_unblind.return_value = b"unblinded"
     pseudonym_mock.hash.return_value = "HASHED"
+    pseudonym_mock.encrypt_pseudonym.return_value = ("encrypted_data", "valid_iv")
 
-    response = client.post(
-        "/decrypt_and_hash", json={"jwe": "JWE", "blind_factor": "BF"}
-    )
+    response = client.post("/process", json={"jwe": "JWE", "blind_factor": "BF"})
 
     assert response.status_code == 200
-    assert response.json() == {"hashed_pseudonym": "HASHED"}
+    assert response.json() == {
+        "encrypted_pseudonym": "encrypted_data",
+        "iv": "valid_iv",
+    }
     pseudonym_mock.decrypt_and_unblind.assert_called_once_with("JWE", "BF")
     pseudonym_mock.hash.assert_called_once_with(b"unblinded")
 
@@ -48,17 +50,17 @@ def test_decrypt_and_hash_returns_hashed_pseudonym(
     ],
     ids=["crypto", "key-not-found", "invalid-jwe"],
 )
-def test_decrypt_and_hash_maps_crypto_errors(
+def test_process_maps_crypto_errors(
     client: TestClient, pseudonym_mock: MagicMock, exc: CryptoError, status: int
 ) -> None:
     pseudonym_mock.decrypt_and_unblind.side_effect = exc
 
-    response = client.post("/decrypt_and_hash", json={"jwe": "X", "blind_factor": "Y"})
+    response = client.post("/process", json={"jwe": "X", "blind_factor": "Y"})
 
     assert response.status_code == status
     assert response.json() == {"error": exc.error_message}
 
 
-def test_decrypt_and_hash_requires_query_params(client: TestClient) -> None:
-    response = client.post("/decrypt_and_hash")
+def test_process_requires_query_params(client: TestClient) -> None:
+    response = client.post("/process")
     assert response.status_code == 422

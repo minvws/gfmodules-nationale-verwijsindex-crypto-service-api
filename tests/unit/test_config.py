@@ -14,6 +14,7 @@ def get_test_config() -> Config:
         app=ConfigApp(
             nvi_ura_number="12345678",
             hashing_key_id="hashing-key",
+            aes_key_id="aes-key-id",
         ),
         uvicorn=ConfigUvicorn(),
         telemetry=ConfigTelemetry(),
