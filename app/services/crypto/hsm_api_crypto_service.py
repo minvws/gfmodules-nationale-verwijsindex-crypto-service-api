@@ -1,4 +1,5 @@
 import base64
+from enum import StrEnum
 import json
 import logging
 
@@ -13,6 +14,12 @@ from app.services.http import HttpService
 logger = logging.getLogger(__name__)
 
 
+class Pkc11Mechanism(StrEnum):
+    AES_CBC = "AES_CBC"
+    SHA256_HMAC = "SHA256_HMAC"
+    RSA_PKCS_OAEP = "RSA_PCKS_OAEP"
+
+
 class HsmApiCryptoService(CryptoService):
     def __init__(
         self,
@@ -20,7 +27,8 @@ class HsmApiCryptoService(CryptoService):
         module: str,
         slot: str,
         hash_key_id: str,
-        support_sha1: bool = False
+        aes_key_id: str,
+        support_sha1: bool = False,
     ):
         logger.debug(f"Initializing HSM API service: module={module}, slot={slot}")
         self._http = http
@@ -28,6 +36,7 @@ class HsmApiCryptoService(CryptoService):
         self.slot = slot
         self.support_sha1 = support_sha1
         self.hash_key_id = hash_key_id
+        self.aes_key_id = aes_key_id
 
     def health_check(self) -> bool:
         try:
@@ -110,7 +119,7 @@ class HsmApiCryptoService(CryptoService):
             data={
                 "label": self.hash_key_id,
                 "data": base64.b64encode(data).decode("utf-8"),
-                "mechanism": "SHA256_HMAC",
+                "mechanism": Pkc11Mechanism.SHA256_HMAC,
             },
         )
         if r.status_code != 200:
@@ -120,7 +129,9 @@ class HsmApiCryptoService(CryptoService):
         except (KeyError, TypeError, JSONDecodeError):
             raise CryptoError(f"Unexpected HMAC response: {r.text}")
 
-    def _rsa_oaep_unwrap(self, key_id: str, encrypted_key: bytes, hash_method: str) -> bytes:
+    def _rsa_oaep_unwrap(
+        self, key_id: str, encrypted_key: bytes, hash_method: str
+    ) -> bytes:
         logger.debug(f"Unwrapping CEK with RSA-OAEP using key {key_id}")
         r = self._http.do_request(
             "POST",
@@ -128,7 +139,7 @@ class HsmApiCryptoService(CryptoService):
             data={
                 "label": key_id,
                 "objtype": "PRIVATE_KEY",
-                "mechanism": "RSA_PKCS_OAEP",
+                "mechanism": Pkc11Mechanism.RSA_PKCS_OAEP,
                 "hashmethod": hash_method,
                 "data": base64.b64encode(encrypted_key).decode("utf-8"),
             },
@@ -141,3 +152,50 @@ class HsmApiCryptoService(CryptoService):
         except (KeyError, TypeError, JSONDecodeError):
             raise CryptoError(f"Unexpected decrypt response: {r.text}")
 
+    def encrypt_aes(self, data: bytes, iv: bytes) -> str:
+        if len(iv) != 16:
+            raise CryptoError("IV for AES_CBC must be 16 bytes length")
+
+        target = base64.urlsafe_b64encode(data)
+        r = self._http.do_request(
+            "POST",
+            sub_route=f"hsm/{self.module}/{self.slot}/encrypt",
+            data={
+                "data": target.decode(),
+                "objtype": "SECRET_KEY",
+                "mechanism": Pkc11Mechanism.AES_CBC,
+                "iv": base64.b64encode(iv).decode(),
+                "label": self.aes_key_id,
+            },
+        )
+
+        if r.status_code != 200:
+            raise CryptoError(f"AES_CBC operation failed {r.text}")
+        try:
+            resp = r.json()
+            results: str = resp["result"]["data"]
+            return results
+        except (KeyError, TypeError, JSONDecodeError) as e:
+            raise CryptoError(f"Unexpected encrypt response: {e}")
+
+    def decrypt_aes(self, data: str, iv: str) -> str:
+        if len(iv) != 16:
+            raise CryptoError("IV for AES_CBC must be 16 bytes length")
+        r = self._http.do_request(
+            "POST",
+            sub_route=f"hsm/{self.module}/{self.slot}/decrypt",
+            data={
+                "data": data,
+                "objtype": "SECRET_KEY",
+                "mechanism": Pkc11Mechanism.AES_CBC,
+                "iv": iv,
+                "label": self.aes_key_id,
+            },
+        )
+        try:
+            response = r.json()
+            results: str = response["result"]["data"]
+            return results
+
+        except (KeyError, TypeError, JSONDecodeError) as e:
+            raise CryptoError(f"Unexpected decrypt response: {e}")

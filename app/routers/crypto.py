@@ -27,17 +27,15 @@ def public_key(
             content={"error": e.error_message}, status_code=e.status_code
         )
 
-    return JSONResponse(
-        content={"kid": key_id, "pem": pem}
-    )
+    return JSONResponse(content={"kid": key_id, "pem": pem})
 
 
 @router.post(
-    "/decrypt_and_hash",
-    summary="Decrypt and hash a pseudonym",
-    description="Decrypt JWE, unblind, hash via HSM, and return hashed pseudonym",
+    "/process",
+    summary="Process incoming JWE and returns an encrypted Pseudonym with an IV",
+    description="Decrypt JWE, unblind, and encrypt the pseudonym with an IV (first 16 byte of the HMAC hash of the pseudonym). All done via HSM",
 )
-def decrypt_and_hash(
+def process(
     data: Annotated[PseudonymRequest, Body()],
     pseudonym_service: Annotated[
         PseudonymService, Depends(container.get_pseudonym_service)
@@ -46,8 +44,12 @@ def decrypt_and_hash(
     try:
         pseudonym = pseudonym_service.decrypt_and_unblind(data.jwe, data.blind_factor)
         hashed_pseudonym = pseudonym_service.hash(pseudonym)
+        encrypted_pseudonym, iv = pseudonym_service.encrypt_pseudonym(
+            pseudonym, hashed_pseudonym
+        )
         return JSONResponse(
-            content={"hashed_pseudonym": hashed_pseudonym}, status_code=200
+            content={"encrypted_pseudonym": encrypted_pseudonym, "iv": iv},
+            status_code=200,
         )
     except CryptoError as e:
         logger.error(f"CryptoError occurred: {e.error_message}")

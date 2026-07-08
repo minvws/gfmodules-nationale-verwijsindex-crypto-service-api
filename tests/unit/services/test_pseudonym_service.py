@@ -30,7 +30,9 @@ def test_decrypt_and_unblind_returns_unblinded_bytes(
     crypto_service_mock.decrypt_jwe_payload.return_value = {
         "subject": f"pseudonym:eval:{_b64(subject_bytes)}"
     }
-    unblind = mocker.patch("app.services.pseudonym_service.pyoprf.unblind", return_value=b"plain")
+    unblind = mocker.patch(
+        "app.services.pseudonym_service.pyoprf.unblind", return_value=b"plain"
+    )
 
     result = pseudonym_service.decrypt_and_unblind("JWE", _b64(blind_factor))
 
@@ -57,7 +59,15 @@ def test_decrypt_and_unblind_propagates_crypto_error(
         "not-a-dict",
         None,
     ],
-    ids=["empty-dict", "none-subj", "int-subj", "wrong-prefix", "wrong-namespace", "string", "none"],
+    ids=[
+        "empty-dict",
+        "none-subj",
+        "int-subj",
+        "wrong-prefix",
+        "wrong-namespace",
+        "string",
+        "none",
+    ],
 )
 def test_decrypt_and_unblind_rejects_invalid_subject(
     payload: Any,
@@ -76,7 +86,7 @@ def test_hash_returns_urlsafe_b64(
 
     result = pseudonym_service.hash(b"in")
 
-    assert result == _b64(b"hash-out")
+    assert result == b"hash-out"
     crypto_service_mock.hash.assert_called_once_with(b"in")
 
 
@@ -106,7 +116,9 @@ def test_decrypt_and_unblind_logs_pse_exchange_failed_on_invalid_subject(
     crypto_service_mock: MagicMock,
     mocker: MockerFixture,
 ) -> None:
-    crypto_service_mock.decrypt_jwe_payload.return_value = {"subject": "wrong-prefix:abc"}
+    crypto_service_mock.decrypt_jwe_payload.return_value = {
+        "subject": "wrong-prefix:abc"
+    }
     log_event = mocker.patch("app.services.pseudonym_service.log_event")
 
     with pytest.raises(InvalidJweError):

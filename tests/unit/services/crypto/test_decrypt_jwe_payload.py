@@ -1,3 +1,4 @@
+import base64
 import json
 from typing import Any
 
@@ -43,6 +44,12 @@ class LocalCryptoService(CryptoService):
         return token.payload
 
     def hash(self, data: bytes) -> bytes:
+        return data
+
+    def encrypt_aes(self, data: bytes, iv: bytes) -> str:
+        return base64.b64encode(data).decode()
+
+    def decrypt_aes(self, data: str, iv: str) -> str:
         return data
 
 

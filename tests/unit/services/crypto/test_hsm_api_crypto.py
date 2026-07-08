@@ -13,7 +13,10 @@ from jwcrypto import jwe, jwk
 from requests.exceptions import ConnectionError as RequestsConnectionError, Timeout
 
 from app.exceptions.exception import CryptoError, InvalidJweError, KeyNotFoundError
-from app.services.crypto.hsm_api_crypto_service import HsmApiCryptoService
+from app.services.crypto.hsm_api_crypto_service import (
+    HsmApiCryptoService,
+    Pkc11Mechanism,
+)
 
 
 def _resp(status: int, body: Any = None, text: str = "") -> MagicMock:
@@ -31,6 +34,7 @@ def service(http_mock: MagicMock) -> HsmApiCryptoService:
         module="m",
         slot="s",
         hash_key_id="hk",
+        aes_key_id="aes_key",
         support_sha1=False,
     )
 
@@ -39,7 +43,9 @@ def _b64u_nopad(data: bytes) -> str:
     return base64.urlsafe_b64encode(data).rstrip(b"=").decode()
 
 
-def _make_jwe(cek: bytes, plaintext: bytes, alg: str = "RSA-OAEP-256", enc: str = "A256GCM") -> tuple[str, bytes]:
+def _make_jwe(
+    cek: bytes, plaintext: bytes, alg: str = "RSA-OAEP-256", enc: str = "A256GCM"
+) -> tuple[str, bytes]:
     header = {"alg": alg, "enc": enc, "kid": "sk"}
     header_b64 = _b64u_nopad(json.dumps(header).encode())
     iv = os.urandom(12)
@@ -48,7 +54,13 @@ def _make_jwe(cek: bytes, plaintext: bytes, alg: str = "RSA-OAEP-256", enc: str 
     ct, tag = cipher.encrypt_and_digest(plaintext)
     encrypted_key = b"WRAPPED_KEY"
     token = ".".join(
-        [header_b64, _b64u_nopad(encrypted_key), _b64u_nopad(iv), _b64u_nopad(ct), _b64u_nopad(tag)]
+        [
+            header_b64,
+            _b64u_nopad(encrypted_key),
+            _b64u_nopad(iv),
+            _b64u_nopad(ct),
+            _b64u_nopad(tag),
+        ]
     )
     return token, encrypted_key
 
@@ -72,7 +84,9 @@ def _unwrap_cek_from_real_jwe(compact_jwe: str, key: jwk.JWK) -> bytes:
     return unwrap.decrypt(encrypted_key)
 
 
-def test_health_check_returns_true_on_200(service: HsmApiCryptoService, http_mock: MagicMock) -> None:
+def test_health_check_returns_true_on_200(
+    service: HsmApiCryptoService, http_mock: MagicMock
+) -> None:
     http_mock.do_request.return_value = _resp(200, {"message": "ok"})
     assert service.health_check() is True
 
@@ -86,13 +100,17 @@ def test_health_check_returns_false_on_failure(
     side_effect_or_status: Any, service: HsmApiCryptoService, http_mock: MagicMock
 ) -> None:
     if isinstance(side_effect_or_status, int):
-        http_mock.do_request.return_value = _resp(side_effect_or_status, {"message": "x"})
+        http_mock.do_request.return_value = _resp(
+            side_effect_or_status, {"message": "x"}
+        )
     else:
         http_mock.do_request.side_effect = side_effect_or_status
     assert service.health_check() is False
 
 
-def test_get_public_key_returns_pem(service: HsmApiCryptoService, http_mock: MagicMock) -> None:
+def test_get_public_key_returns_pem(
+    service: HsmApiCryptoService, http_mock: MagicMock
+) -> None:
     http_mock.do_request.return_value = _resp(200, {"objects": [{"publickey": "PEM"}]})
     assert service.get_public_key("sk") == "PEM"
 
@@ -106,7 +124,9 @@ def test_get_public_key_fetches_per_key_id(
     assert http_mock.do_request.call_count == 2
 
 
-def test_get_public_key_raises_when_not_found(service: HsmApiCryptoService, http_mock: MagicMock) -> None:
+def test_get_public_key_raises_when_not_found(
+    service: HsmApiCryptoService, http_mock: MagicMock
+) -> None:
     http_mock.do_request.return_value = _resp(404, text="missing")
     with pytest.raises(KeyNotFoundError):
         service.get_public_key("sk")
@@ -125,7 +145,9 @@ def test_get_public_key_raises_on_malformed_response(
         service.get_public_key("sk")
 
 
-def test_decrypt_jwe_round_trip(service: HsmApiCryptoService, http_mock: MagicMock) -> None:
+def test_decrypt_jwe_round_trip(
+    service: HsmApiCryptoService, http_mock: MagicMock
+) -> None:
     cek = os.urandom(32)
     token, _encrypted_key = _make_jwe(cek, b"plaintext")
     http_mock.do_request.return_value = _resp(
@@ -135,11 +157,13 @@ def test_decrypt_jwe_round_trip(service: HsmApiCryptoService, http_mock: MagicMo
     assert service.decrypt_jwe(token, "sk") == b"plaintext"
     call = http_mock.do_request.call_args
     assert call.kwargs["sub_route"] == "hsm/m/s/decrypt"
-    assert call.kwargs["data"]["mechanism"] == "RSA_PKCS_OAEP"
+    assert call.kwargs["data"]["mechanism"] == Pkc11Mechanism.RSA_PKCS_OAEP
     assert call.kwargs["data"]["hashmethod"] == "sha256"
 
 
-def test_decrypt_jwe_round_trip_with_real_jwe(service: HsmApiCryptoService, http_mock: MagicMock) -> None:
+def test_decrypt_jwe_round_trip_with_real_jwe(
+    service: HsmApiCryptoService, http_mock: MagicMock
+) -> None:
     key = jwk.JWK.generate(kty="RSA", size=2048)
     token = _create_real_jwe_compact(b"plaintext", key.public())
     cek = _unwrap_cek_from_real_jwe(token, key)
@@ -150,7 +174,9 @@ def test_decrypt_jwe_round_trip_with_real_jwe(service: HsmApiCryptoService, http
     assert service.decrypt_jwe(token, "sk") == b"plaintext"
 
 
-def test_decrypt_jwe_rejects_malformed_compact_serialization(service: HsmApiCryptoService) -> None:
+def test_decrypt_jwe_rejects_malformed_compact_serialization(
+    service: HsmApiCryptoService,
+) -> None:
     with pytest.raises(InvalidJweError):
         service.decrypt_jwe("only.three.parts", "sk")
 
@@ -169,7 +195,12 @@ def test_decrypt_jwe_validates_header_fields(
     alg: str, enc: str, support_sha1: bool, err: type[Exception], http_mock: MagicMock
 ) -> None:
     svc = HsmApiCryptoService(
-        http_mock, module="m", slot="s", hash_key_id="h", support_sha1=support_sha1
+        http_mock,
+        module="m",
+        slot="s",
+        hash_key_id="h",
+        support_sha1=support_sha1,
+        aes_key_id="aes-key-id",
     )
     cek = os.urandom(32)
     token, _ = _make_jwe(cek, b"plain", alg=alg, enc=enc)
@@ -179,23 +210,36 @@ def test_decrypt_jwe_validates_header_fields(
 
 def test_decrypt_jwe_supports_sha1_when_enabled(http_mock: MagicMock) -> None:
     svc = HsmApiCryptoService(
-        http_mock, module="m", slot="s", hash_key_id="h", support_sha1=True
+        http_mock,
+        module="m",
+        slot="s",
+        hash_key_id="h",
+        support_sha1=True,
+        aes_key_id="aes-key-id",
     )
     cek = os.urandom(32)
     token, _ = _make_jwe(cek, b"plain", alg="RSA-OAEP")
-    http_mock.do_request.return_value = _resp(200, {"result": base64.b64encode(cek).decode()})
+    http_mock.do_request.return_value = _resp(
+        200, {"result": base64.b64encode(cek).decode()}
+    )
     assert svc.decrypt_jwe(token, "sk") == b"plain"
 
 
-def test_decrypt_jwe_rejects_wrong_cek_length(service: HsmApiCryptoService, http_mock: MagicMock) -> None:
+def test_decrypt_jwe_rejects_wrong_cek_length(
+    service: HsmApiCryptoService, http_mock: MagicMock
+) -> None:
     cek = os.urandom(32)
     token, _ = _make_jwe(cek, b"x")
-    http_mock.do_request.return_value = _resp(200, {"result": base64.b64encode(b"short").decode()})
+    http_mock.do_request.return_value = _resp(
+        200, {"result": base64.b64encode(b"short").decode()}
+    )
     with pytest.raises(CryptoError):
         service.decrypt_jwe(token, "sk")
 
 
-def test_decrypt_jwe_unwrap_failure_raises(service: HsmApiCryptoService, http_mock: MagicMock) -> None:
+def test_decrypt_jwe_unwrap_failure_raises(
+    service: HsmApiCryptoService, http_mock: MagicMock
+) -> None:
     cek = os.urandom(32)
     token, _ = _make_jwe(cek, b"x")
     http_mock.do_request.return_value = _resp(500, text="boom")
@@ -203,7 +247,9 @@ def test_decrypt_jwe_unwrap_failure_raises(service: HsmApiCryptoService, http_mo
         service.decrypt_jwe(token, "sk")
 
 
-def test_hash_returns_decoded_hmac(service: HsmApiCryptoService, http_mock: MagicMock) -> None:
+def test_hash_returns_decoded_hmac(
+    service: HsmApiCryptoService, http_mock: MagicMock
+) -> None:
     digest = b"\x10" * 32
     http_mock.do_request.return_value = _resp(
         200, {"result": {"data": base64.b64encode(digest).decode()}}
@@ -214,13 +260,17 @@ def test_hash_returns_decoded_hmac(service: HsmApiCryptoService, http_mock: Magi
     assert call.kwargs["data"]["mechanism"] == "SHA256_HMAC"
 
 
-def test_hash_raises_on_error_status(service: HsmApiCryptoService, http_mock: MagicMock) -> None:
+def test_hash_raises_on_error_status(
+    service: HsmApiCryptoService, http_mock: MagicMock
+) -> None:
     http_mock.do_request.return_value = _resp(500, text="bad")
     with pytest.raises(CryptoError):
         service.hash(b"input")
 
 
-def test_hash_raises_on_malformed_response(service: HsmApiCryptoService, http_mock: MagicMock) -> None:
+def test_hash_raises_on_malformed_response(
+    service: HsmApiCryptoService, http_mock: MagicMock
+) -> None:
     http_mock.do_request.return_value = _resp(200, {"wrong": "shape"})
     with pytest.raises(CryptoError):
         service.hash(b"input")

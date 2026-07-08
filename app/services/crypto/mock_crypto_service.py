@@ -6,7 +6,9 @@ from app.services.crypto.crypto_service import CryptoService
 
 logger = logging.getLogger(__name__)
 
-_CANNED_BLINDED_PSEUDONYM = base64.urlsafe_b64encode(b"mock-blinded-pseudonym").decode("utf-8")
+_CANNED_BLINDED_PSEUDONYM = base64.urlsafe_b64encode(b"mock-blinded-pseudonym").decode(
+    "utf-8"
+)
 _CANNED_PAYLOAD = {"subject": f"pseudonym:eval:{_CANNED_BLINDED_PSEUDONYM}"}
 
 
@@ -30,4 +32,10 @@ class MockCryptoService(CryptoService):
         return _CANNED_PAYLOAD
 
     def hash(self, data: bytes) -> bytes:
+        return data
+
+    def encrypt_aes(self, data: bytes, iv: bytes) -> str:
+        return base64.b64encode(data).decode()
+
+    def decrypt_aes(self, data: str, iv: str) -> str:
         return data
