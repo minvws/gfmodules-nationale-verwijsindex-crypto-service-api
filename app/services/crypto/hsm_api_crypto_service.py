@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 class Pkc11Mechanism(StrEnum):
     AES_CBC = "AES_CBC"
     SHA256_HMAC = "SHA256_HMAC"
-    RSA_PKCS_OAEP = "RSA_PCKS_OAEP"
+    RSA_PKCS_OAEP = "RSA_PKCS_OAEP"
 
 
 class HsmApiCryptoService(CryptoService):
@@ -156,7 +156,7 @@ class HsmApiCryptoService(CryptoService):
         if len(iv) != 16:
             raise CryptoError("IV for AES_CBC must be 16 bytes length")
 
-        target = base64.urlsafe_b64encode(data)
+        target = base64.b64encode(data)
         r = self._http.do_request(
             "POST",
             sub_route=f"hsm/{self.module}/{self.slot}/encrypt",
