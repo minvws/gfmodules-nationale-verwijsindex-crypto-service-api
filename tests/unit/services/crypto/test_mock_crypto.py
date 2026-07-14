@@ -1,23 +1,37 @@
+import pytest
 from app.services.crypto.mock_crypto_service import MockCryptoService
+from tests.unit.test_config import get_test_config
 
 
-def test_health_check_is_always_true() -> None:
-    assert MockCryptoService().health_check() is True
+@pytest.fixture
+def mock_crypto_service() -> MockCryptoService:
+    config = get_test_config()
+    return MockCryptoService(
+        aes_key_id=config.app.aes_key_id, aes_mechanism=config.app.aes_mechanism
+    )
 
 
-def test_get_public_key_returns_sentinel() -> None:
-    assert MockCryptoService().get_public_key("any") == "no-key"
+def test_health_check_is_always_true(mock_crypto_service: MockCryptoService) -> None:
+    assert mock_crypto_service.health_check() is True
 
 
-def test_decrypt_jwe_round_trips_input() -> None:
-    assert MockCryptoService().decrypt_jwe("token", "kid") == b"token"
+def test_get_public_key_returns_sentinel(
+    mock_crypto_service: MockCryptoService,
+) -> None:
+    assert mock_crypto_service.get_public_key("any") == "no-key"
 
 
-def test_decrypt_jwe_payload_returns_canned_subject() -> None:
-    payload = MockCryptoService().decrypt_jwe_payload("token")
+def test_decrypt_jwe_round_trips_input(mock_crypto_service: MockCryptoService) -> None:
+    assert mock_crypto_service.decrypt_jwe("token", "kid") == b"token"
+
+
+def test_decrypt_jwe_payload_returns_canned_subject(
+    mock_crypto_service: MockCryptoService,
+) -> None:
+    payload = mock_crypto_service.decrypt_jwe_payload("token")
     assert isinstance(payload, dict)
     assert payload["subject"].startswith("pseudonym:eval:")
 
 
-def test_hash_is_identity() -> None:
-    assert MockCryptoService().hash(b"abc") == b"abc"
+def test_hash_is_identity(mock_crypto_service: MockCryptoService) -> None:
+    assert mock_crypto_service.hash(b"abc") == b"abc"

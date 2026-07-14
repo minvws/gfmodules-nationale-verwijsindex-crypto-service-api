@@ -6,6 +6,8 @@ from typing import Any
 
 from pydantic import BaseModel, ValidationError, Field
 
+from app.data import Pkc11Mechanism
+
 logger = logging.getLogger(__name__)
 
 _PATH = "app.conf"
@@ -26,6 +28,7 @@ class ConfigApp(BaseModel):
     nvi_ura_number: str
     hashing_key_id: str
     aes_key_id: str
+    aes_mechanism: Pkc11Mechanism
     allow_insecure_requests: bool = Field(default=False)
 
 

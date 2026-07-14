@@ -8,6 +8,7 @@ from fastapi.testclient import TestClient
 from app import container
 from app.config import Config
 from app.exceptions.exception import CryptoError, InvalidJweError, KeyNotFoundError
+from app.models.pseudonym import PseudonymResponse
 from app.routers.crypto import router as crypto_router
 
 
@@ -28,7 +29,12 @@ def test_process_returns_encrypted_pseudonym_with_iv(
 ) -> None:
     pseudonym_mock.decrypt_and_unblind.return_value = b"unblinded"
     pseudonym_mock.hash.return_value = "HASHED"
-    pseudonym_mock.encrypt_pseudonym.return_value = ("encrypted_data", "valid_iv")
+    pseudonym_mock.encrypt_pseudonym.return_value = PseudonymResponse(
+        encrypted_pseudonym="encrypted_data",
+        iv="valid_iv",
+        label="label-1",
+        mechanism="AES_CBC",
+    )
 
     response = client.post("/process", json={"jwe": "JWE", "blind_factor": "BF"})
 
@@ -36,6 +42,8 @@ def test_process_returns_encrypted_pseudonym_with_iv(
     assert response.json() == {
         "encrypted_pseudonym": "encrypted_data",
         "iv": "valid_iv",
+        "label": "label-1",
+        "mechanism": "AES_CBC",
     }
     pseudonym_mock.decrypt_and_unblind.assert_called_once_with("JWE", "BF")
     pseudonym_mock.hash.assert_called_once_with(b"unblinded")

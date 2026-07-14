@@ -5,6 +5,7 @@ from typing import Any
 
 from jwcrypto import jwe
 
+from app.data import Pkc11Mechanism
 from app.exceptions.exception import CryptoError, InvalidJweError
 
 logger = logging.getLogger(__name__)
@@ -14,6 +15,10 @@ class CryptoService(ABC):
     """
     Interface for a cryptographic service that provides RSA key management, JWE decryption, and hashing.
     """
+
+    def __init__(self, aes_key_id: str, aes_mechanism: Pkc11Mechanism) -> None:
+        self.aes_key_id = aes_key_id
+        self.aes_mechanism = aes_mechanism
 
     @abstractmethod
     def health_check(self) -> bool:

@@ -44,11 +44,11 @@ def process(
     try:
         pseudonym = pseudonym_service.decrypt_and_unblind(data.jwe, data.blind_factor)
         hashed_pseudonym = pseudonym_service.hash(pseudonym)
-        encrypted_pseudonym, iv = pseudonym_service.encrypt_pseudonym(
-            pseudonym, hashed_pseudonym
+        results = pseudonym_service.encrypt_pseudonym(
+            pseudonym=pseudonym, hmac_hash=hashed_pseudonym
         )
         return JSONResponse(
-            content={"encrypted_pseudonym": encrypted_pseudonym, "iv": iv},
+            content=results.model_dump(),
             status_code=200,
         )
     except CryptoError as e:

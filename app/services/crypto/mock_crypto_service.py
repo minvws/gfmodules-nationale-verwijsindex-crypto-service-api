@@ -2,6 +2,7 @@ import base64
 import logging
 from typing import Any
 
+from app.data import Pkc11Mechanism
 from app.services.crypto.crypto_service import CryptoService
 
 logger = logging.getLogger(__name__)
@@ -17,6 +18,9 @@ class MockCryptoService(CryptoService):
     Pass-through crypto service: no keys, no crypto.
     Intended for local development and wiring smoke tests.
     """
+
+    def __init__(self, aes_key_id: str, aes_mechanism: Pkc11Mechanism) -> None:
+        super().__init__(aes_key_id, aes_mechanism)
 
     def health_check(self) -> bool:
         return True
