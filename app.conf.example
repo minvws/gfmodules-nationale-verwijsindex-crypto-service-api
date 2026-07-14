@@ -9,6 +9,8 @@ hashing_key_id=abcdef1234567890
 allow_insecure_requests = False
 # AES key-id used for encrypting and decrypting pseudonyms
 aes_key_id = 12345678
+# configurable AES mechanism to use, currently only AES_CBC is supported
+aes_mechanism = AES_CBC
 
 [logging]
 # Syslog addresses in host:port format (UDP)

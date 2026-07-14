@@ -1,11 +1,11 @@
 import base64
 import logging
-from typing import Tuple
 
 import pyoprf
 
 from app.exceptions.exception import CryptoError, InvalidJweError
 from app.logging.events import PSE_EXCHANGE_FAILED, PSE_EXCHANGE_OK, log_event
+from app.models.pseudonym import PseudonymResponse
 from app.services.crypto.crypto_service import CryptoService
 
 logger = logging.getLogger(__name__)
@@ -64,12 +64,22 @@ class PseudonymService:
         )
         return result
 
-    def encrypt_pseudonym(self, pseudonym: bytes, hmac_hash: bytes) -> Tuple[str, str]:
+    def encrypt_pseudonym(
+        self, pseudonym: bytes, hmac_hash: bytes
+    ) -> PseudonymResponse:
         iv = hmac_hash[:16]
         logger.debug("encrypting pseudonym")
         encrypted_data = self._crypto_service.encrypt_aes(pseudonym, iv)
         logger.debug("Pseudonym encrypted successfully")
-        return encrypted_data, base64.urlsafe_b64encode(iv).decode()
+
+        label = self._crypto_service.aes_key_id
+        mechanism = self._crypto_service.aes_mechanism
+        return PseudonymResponse(
+            encrypted_pseudonym=encrypted_data,
+            iv=base64.urlsafe_b64encode(iv).decode(),
+            label=label,
+            mechanism=mechanism,
+        )
 
     def hash(self, pseudonym: bytes) -> bytes:
         logger.debug("Hashing pseudonym")

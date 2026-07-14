@@ -1,5 +1,4 @@
 import base64
-from enum import StrEnum
 import json
 import logging
 
@@ -7,17 +6,12 @@ from Crypto.Cipher import AES
 from requests import JSONDecodeError
 from requests.exceptions import ConnectionError as RequestsConnectionError, Timeout
 
+from app.data import Pkc11Mechanism
 from app.exceptions.exception import CryptoError, InvalidJweError, KeyNotFoundError
 from app.services.crypto.crypto_service import CryptoService
 from app.services.http import HttpService
 
 logger = logging.getLogger(__name__)
-
-
-class Pkc11Mechanism(StrEnum):
-    AES_CBC = "AES_CBC"
-    SHA256_HMAC = "SHA256_HMAC"
-    RSA_PKCS_OAEP = "RSA_PKCS_OAEP"
 
 
 class HsmApiCryptoService(CryptoService):
@@ -28,6 +22,7 @@ class HsmApiCryptoService(CryptoService):
         slot: str,
         hash_key_id: str,
         aes_key_id: str,
+        aes_mechanism: Pkc11Mechanism,
         support_sha1: bool = False,
     ):
         logger.debug(f"Initializing HSM API service: module={module}, slot={slot}")
@@ -36,7 +31,7 @@ class HsmApiCryptoService(CryptoService):
         self.slot = slot
         self.support_sha1 = support_sha1
         self.hash_key_id = hash_key_id
-        self.aes_key_id = aes_key_id
+        super().__init__(aes_key_id, aes_mechanism)
 
     def health_check(self) -> bool:
         try:

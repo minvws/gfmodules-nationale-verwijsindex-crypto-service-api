@@ -5,6 +5,7 @@ from fastapi.testclient import TestClient
 from pytest_mock import MockerFixture
 
 
+
 def _b64u(data: bytes) -> str:
     return base64.urlsafe_b64encode(data).decode()
 
@@ -22,6 +23,8 @@ def test_process_full_flow(
         "app.services.pseudonym_service.pyoprf.unblind", return_value=b"unblinded"
     )
     crypto_stub.encrypt_aes.return_value = "some-encrypted_data"
+    crypto_stub.aes_key_id = "label-1"
+    crypto_stub.aes_mechanism = "AES_CBC"
 
     response = client.post(
         "/process",
@@ -32,6 +35,8 @@ def test_process_full_flow(
     assert response.json() == {
         "encrypted_pseudonym": "some-encrypted_data",
         "iv": _b64u(hmac_value[:16]),
+        "label": "label-1",
+        "mechanism": "AES_CBC",
     }
     crypto_stub.decrypt_jwe_payload.assert_called_once_with("JWE-TOKEN")
     crypto_stub.hash.assert_called_once_with(b"unblinded")
