@@ -93,3 +93,22 @@ def test_plaintext_formatter_includes_basic_fields(context_vars: None) -> None:
 def test_plaintext_formatter_appends_exception() -> None:
     out = PlainTextFormatter().format(_exc_record())
     assert "ValueError" in out
+
+
+def test_json_formatter_stamps_stream_id_and_application_id() -> None:
+    # On the shared syslog channel the log server tells streams and
+    # applications apart by the stream_id/application_id stamped per record.
+    out = json.loads(
+        JsonFormatter(
+            stream_id="app",
+            application_id="nationale-verwijsindex-crypto-service-api",
+        ).format(_record())
+    )
+    assert out["stream_id"] == "app"
+    assert out["application_id"] == "nationale-verwijsindex-crypto-service-api"
+
+
+def test_json_formatter_omits_stream_id_and_application_id_when_unset() -> None:
+    out = json.loads(JsonFormatter().format(_record()))
+    assert "stream_id" not in out
+    assert "application_id" not in out
