@@ -19,9 +19,7 @@ def container_config(binder: inject.Binder) -> None:
     crypto_service: CryptoService
     if config.hsm_api.mock:
         logger.debug("Initializing mock crypto service")
-        crypto_service = MockCryptoService(
-            aes_key_id=config.app.aes_key_id, aes_mechanism=config.app.aes_mechanism
-        )
+        crypto_service = MockCryptoService()
     else:
         logger.debug(f"Initializing HSM API at {config.hsm_api.url}")
         http = HttpService(
@@ -37,8 +35,6 @@ def container_config(binder: inject.Binder) -> None:
             slot=config.hsm_api.slot,
             hash_key_id=config.app.hashing_key_id,
             support_sha1=config.hsm_api.support_sha1,
-            aes_key_id=config.app.aes_key_id,
-            aes_mechanism=config.app.aes_mechanism,
         )
 
     binder.bind(CryptoService, crypto_service)

@@ -19,9 +19,6 @@ class MockCryptoService(CryptoService):
     Intended for local development and wiring smoke tests.
     """
 
-    def __init__(self, aes_key_id: str, aes_mechanism: Pkc11Mechanism) -> None:
-        super().__init__(aes_key_id, aes_mechanism)
-
     def health_check(self) -> bool:
         return True
 
@@ -38,8 +35,12 @@ class MockCryptoService(CryptoService):
     def hash(self, data: bytes) -> bytes:
         return data
 
-    def encrypt_aes(self, data: bytes, iv: bytes) -> str:
+    def encrypt_aes(
+        self, data: bytes, iv: bytes, label: str, mechanism: Pkc11Mechanism
+    ) -> str:
         return base64.b64encode(data).decode()
 
-    def decrypt_aes(self, data: str, iv: str) -> str:
+    def decrypt_aes(
+        self, data: str, iv: str, label: str, mechanism: Pkc11Mechanism
+    ) -> str:
         return data

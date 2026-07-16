@@ -17,7 +17,6 @@ from app.services.crypto.hsm_api_crypto_service import (
     HsmApiCryptoService,
 )
 from app.data import Pkc11Mechanism
-from tests.unit.test_config import get_test_config
 
 
 def _resp(status: int, body: Any = None, text: str = "") -> MagicMock:
@@ -30,14 +29,11 @@ def _resp(status: int, body: Any = None, text: str = "") -> MagicMock:
 
 @pytest.fixture
 def service(http_mock: MagicMock) -> HsmApiCryptoService:
-    config = get_test_config()
     return HsmApiCryptoService(
         http_mock,
         module="m",
         slot="s",
         hash_key_id="hk",
-        aes_key_id=config.app.aes_key_id,
-        aes_mechanism=config.app.aes_mechanism,
         support_sha1=False,
     )
 
@@ -203,8 +199,6 @@ def test_decrypt_jwe_validates_header_fields(
         slot="s",
         hash_key_id="h",
         support_sha1=support_sha1,
-        aes_key_id="aes-key-id",
-        aes_mechanism=Pkc11Mechanism.AES_CBC,
     )
     cek = os.urandom(32)
     token, _ = _make_jwe(cek, b"plain", alg=alg, enc=enc)
@@ -219,8 +213,6 @@ def test_decrypt_jwe_supports_sha1_when_enabled(http_mock: MagicMock) -> None:
         slot="s",
         hash_key_id="h",
         support_sha1=True,
-        aes_key_id="aes-key-id",
-        aes_mechanism=Pkc11Mechanism.AES_CBC,
     )
     cek = os.urandom(32)
     token, _ = _make_jwe(cek, b"plain", alg="RSA-OAEP")

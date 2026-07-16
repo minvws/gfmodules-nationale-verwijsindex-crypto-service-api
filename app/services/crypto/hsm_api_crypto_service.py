@@ -21,8 +21,6 @@ class HsmApiCryptoService(CryptoService):
         module: str,
         slot: str,
         hash_key_id: str,
-        aes_key_id: str,
-        aes_mechanism: Pkc11Mechanism,
         support_sha1: bool = False,
     ):
         logger.debug(f"Initializing HSM API service: module={module}, slot={slot}")
@@ -31,7 +29,6 @@ class HsmApiCryptoService(CryptoService):
         self.slot = slot
         self.support_sha1 = support_sha1
         self.hash_key_id = hash_key_id
-        super().__init__(aes_key_id, aes_mechanism)
 
     def health_check(self) -> bool:
         try:
@@ -147,7 +144,9 @@ class HsmApiCryptoService(CryptoService):
         except (KeyError, TypeError, JSONDecodeError):
             raise CryptoError(f"Unexpected decrypt response: {r.text}")
 
-    def encrypt_aes(self, data: bytes, iv: bytes) -> str:
+    def encrypt_aes(
+        self, data: bytes, iv: bytes, label: str, mechanism: Pkc11Mechanism
+    ) -> str:
         if len(iv) != 16:
             raise CryptoError("IV for AES_CBC must be 16 bytes length")
 
@@ -158,9 +157,9 @@ class HsmApiCryptoService(CryptoService):
             data={
                 "data": target.decode(),
                 "objtype": "SECRET_KEY",
-                "mechanism": Pkc11Mechanism.AES_CBC,
+                "mechanism": mechanism.value,
                 "iv": base64.b64encode(iv).decode(),
-                "label": self.aes_key_id,
+                "label": label,
             },
         )
 
@@ -173,7 +172,9 @@ class HsmApiCryptoService(CryptoService):
         except (KeyError, TypeError, JSONDecodeError) as e:
             raise CryptoError(f"Unexpected encrypt response: {e}")
 
-    def decrypt_aes(self, data: str, iv: str) -> str:
+    def decrypt_aes(
+        self, data: str, iv: str, label: str, mechanism: Pkc11Mechanism
+    ) -> str:
         if len(iv) != 16:
             raise CryptoError("IV for AES_CBC must be 16 bytes length")
         r = self._http.do_request(
@@ -182,9 +183,9 @@ class HsmApiCryptoService(CryptoService):
             data={
                 "data": data,
                 "objtype": "SECRET_KEY",
-                "mechanism": Pkc11Mechanism.AES_CBC,
+                "mechanism": mechanism.value,
                 "iv": iv,
-                "label": self.aes_key_id,
+                "label": label,
             },
         )
         try:

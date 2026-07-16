@@ -3,6 +3,7 @@ import logging
 
 import pyoprf
 
+from app.data import Pkc11Mechanism
 from app.exceptions.exception import CryptoError, InvalidJweError
 from app.logging.events import PSE_EXCHANGE_FAILED, PSE_EXCHANGE_OK, log_event
 from app.models.pseudonym import PseudonymResponse
@@ -65,20 +66,22 @@ class PseudonymService:
         return result
 
     def encrypt_pseudonym(
-        self, pseudonym: bytes, hmac_hash: bytes
+        self,
+        pseudonym: bytes,
+        hmac_hash: bytes,
+        label: str,
+        mechanism: Pkc11Mechanism,
     ) -> PseudonymResponse:
         iv = hmac_hash[:16]
         logger.debug("encrypting pseudonym")
-        encrypted_data = self._crypto_service.encrypt_aes(pseudonym, iv)
+        encrypted_data = self._crypto_service.encrypt_aes(
+            data=pseudonym, iv=iv, label=label, mechanism=mechanism
+        )
         logger.debug("Pseudonym encrypted successfully")
 
-        label = self._crypto_service.aes_key_id
-        mechanism = self._crypto_service.aes_mechanism
         return PseudonymResponse(
             encrypted_pseudonym=encrypted_data,
             iv=base64.urlsafe_b64encode(iv).decode(),
-            label=label,
-            mechanism=mechanism,
         )
 
     def hash(self, pseudonym: bytes) -> bytes:

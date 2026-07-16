@@ -46,10 +46,10 @@ class LocalCryptoService(CryptoService):
     def hash(self, data: bytes) -> bytes:
         return data
 
-    def encrypt_aes(self, data: bytes, iv: bytes) -> str:
+    def encrypt_aes(self, data: bytes, iv: bytes, label: str, mechanism: str) -> str:
         return base64.b64encode(data).decode()
 
-    def decrypt_aes(self, data: str, iv: str) -> str:
+    def decrypt_aes(self, data: str, iv: str, label: str, mechanism: str) -> str:
         return data
 
 
