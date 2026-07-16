@@ -5,7 +5,6 @@ from fastapi.testclient import TestClient
 from pytest_mock import MockerFixture
 
 
-
 def _b64u(data: bytes) -> str:
     return base64.urlsafe_b64encode(data).decode()
 
@@ -28,15 +27,18 @@ def test_process_full_flow(
 
     response = client.post(
         "/process",
-        json={"jwe": "JWE-TOKEN", "blind_factor": _b64u(b"blind-factor")},
+        json={
+            "jwe": "JWE-TOKEN",
+            "blind_factor": _b64u(b"blind-factor"),
+            "label": "label-1",
+            "mechanism": "AES_CBC",
+        },
     )
 
     assert response.status_code == 200
     assert response.json() == {
         "encrypted_pseudonym": "some-encrypted_data",
         "iv": _b64u(hmac_value[:16]),
-        "label": "label-1",
-        "mechanism": "AES_CBC",
     }
     crypto_stub.decrypt_jwe_payload.assert_called_once_with("JWE-TOKEN")
     crypto_stub.hash.assert_called_once_with(b"unblinded")
@@ -49,7 +51,12 @@ def test_process_returns_400_when_subject_invalid(
 
     response = client.post(
         "/process",
-        json={"jwe": "X", "blind_factor": _b64u(b"blind-factor")},
+        json={
+            "jwe": "X",
+            "blind_factor": _b64u(b"blind-factor"),
+            "label": "label-1",
+            "mechanism": "AES_CBC",
+        },
     )
 
     assert response.status_code == 400

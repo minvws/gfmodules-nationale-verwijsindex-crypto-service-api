@@ -7,10 +7,6 @@ nvi_ura_number = 12345678
 hashing_key_id=abcdef1234567890
 # Whether to suppress urllib3 InsecureRequestWarning
 allow_insecure_requests = False
-# AES key-id used for encrypting and decrypting pseudonyms
-aes_key_id = 12345678
-# configurable AES mechanism to use, currently only AES_CBC is supported
-aes_mechanism = AES_CBC
 
 [logging]
 # All keys are optional. When syslog_path is omitted, logs only go to stdout.

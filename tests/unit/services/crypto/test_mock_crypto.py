@@ -1,14 +1,10 @@
 import pytest
 from app.services.crypto.mock_crypto_service import MockCryptoService
-from tests.unit.test_config import get_test_config
 
 
 @pytest.fixture
 def mock_crypto_service() -> MockCryptoService:
-    config = get_test_config()
-    return MockCryptoService(
-        aes_key_id=config.app.aes_key_id, aes_mechanism=config.app.aes_mechanism
-    )
+    return MockCryptoService()
 
 
 def test_health_check_is_always_true(mock_crypto_service: MockCryptoService) -> None:

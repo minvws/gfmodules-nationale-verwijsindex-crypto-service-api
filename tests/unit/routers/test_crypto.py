@@ -32,18 +32,22 @@ def test_process_returns_encrypted_pseudonym_with_iv(
     pseudonym_mock.encrypt_pseudonym.return_value = PseudonymResponse(
         encrypted_pseudonym="encrypted_data",
         iv="valid_iv",
-        label="label-1",
-        mechanism="AES_CBC",
     )
 
-    response = client.post("/process", json={"jwe": "JWE", "blind_factor": "BF"})
+    response = client.post(
+        "/process",
+        json={
+            "jwe": "JWE",
+            "blind_factor": "BF",
+            "label": "label-1",
+            "mechanism": "AES_CBC",
+        },
+    )
 
     assert response.status_code == 200
     assert response.json() == {
         "encrypted_pseudonym": "encrypted_data",
         "iv": "valid_iv",
-        "label": "label-1",
-        "mechanism": "AES_CBC",
     }
     pseudonym_mock.decrypt_and_unblind.assert_called_once_with("JWE", "BF")
     pseudonym_mock.hash.assert_called_once_with(b"unblinded")
@@ -63,7 +67,15 @@ def test_process_maps_crypto_errors(
 ) -> None:
     pseudonym_mock.decrypt_and_unblind.side_effect = exc
 
-    response = client.post("/process", json={"jwe": "X", "blind_factor": "Y"})
+    response = client.post(
+        "/process",
+        json={
+            "jwe": "X",
+            "blind_factor": "Y",
+            "label": "label-1",
+            "mechanism": "AES_CBC",
+        },
+    )
 
     assert response.status_code == status
     assert response.json() == {"error": exc.error_message}

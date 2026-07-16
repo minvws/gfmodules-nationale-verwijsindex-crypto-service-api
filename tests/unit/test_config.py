@@ -7,7 +7,6 @@ from app.config import (
     ConfigTelemetry,
     ConfigUvicorn,
 )
-from app.data import Pkc11Mechanism
 
 
 def get_test_config() -> Config:
@@ -15,8 +14,6 @@ def get_test_config() -> Config:
         app=ConfigApp(
             nvi_ura_number="12345678",
             hashing_key_id="hashing-key",
-            aes_key_id="aes-key-id",
-            aes_mechanism=Pkc11Mechanism.AES_CBC,
         ),
         uvicorn=ConfigUvicorn(),
         telemetry=ConfigTelemetry(),

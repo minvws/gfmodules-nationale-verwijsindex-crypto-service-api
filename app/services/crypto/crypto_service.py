@@ -16,10 +16,6 @@ class CryptoService(ABC):
     Interface for a cryptographic service that provides RSA key management, JWE decryption, and hashing.
     """
 
-    def __init__(self, aes_key_id: str, aes_mechanism: Pkc11Mechanism) -> None:
-        self.aes_key_id = aes_key_id
-        self.aes_mechanism = aes_mechanism
-
     @abstractmethod
     def health_check(self) -> bool:
         """
@@ -48,13 +44,17 @@ class CryptoService(ABC):
         """
 
     @abstractmethod
-    def encrypt_aes(self, data: bytes, iv: bytes) -> str:
+    def encrypt_aes(
+        self, data: bytes, iv: bytes, label: str, mechanism: Pkc11Mechanism
+    ) -> str:
         """
         Encrypts a piece of data in combination with an iv.
         """
 
     @abstractmethod
-    def decrypt_aes(self, data: str, iv: str) -> str:
+    def decrypt_aes(
+        self, data: str, iv: str, label: str, mechanism: Pkc11Mechanism
+    ) -> str:
         """
         Decrypts a piece of data with a give IV. Function expects the params
         to be already encoded.

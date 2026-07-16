@@ -5,6 +5,7 @@ from fastapi import APIRouter, Body, Depends
 from fastapi.responses import JSONResponse
 
 from app import container
+from app.data import Pkc11Mechanism
 from app.exceptions.exception import CryptoError
 from app.models.pseudonym import PseudonymRequest
 from app.services.crypto.crypto_service import CryptoService
@@ -44,8 +45,12 @@ def process(
     try:
         pseudonym = pseudonym_service.decrypt_and_unblind(data.jwe, data.blind_factor)
         hashed_pseudonym = pseudonym_service.hash(pseudonym)
+
         results = pseudonym_service.encrypt_pseudonym(
-            pseudonym=pseudonym, hmac_hash=hashed_pseudonym
+            pseudonym=pseudonym,
+            hmac_hash=hashed_pseudonym,
+            label=data.label,
+            mechanism=Pkc11Mechanism(data.mechanism),
         )
         return JSONResponse(
             content=results.model_dump(),
