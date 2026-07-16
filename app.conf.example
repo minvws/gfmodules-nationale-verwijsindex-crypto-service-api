@@ -13,15 +13,14 @@ aes_key_id = 12345678
 aes_mechanism = AES_CBC
 
 [logging]
-# Syslog addresses in host:port format (UDP)
-# Application logs go to stdout and to handler
-app_path = syslog:5514
-# Siem is for security events
-siem_path = syslog:5515
-# Logs for public inspection
-public_inspect_path = syslog:5516
-# Logs for debugging purposes
-debug_path = syslog:5517
+# All keys are optional. When syslog_path is omitted, logs only go to stdout.
+# Single syslog channel in host:port format (UDP). All streams (app, siem,
+# public_inspect, debug) are sent here; each JSON record carries a stream_id
+# field so the log server can tell them apart.
+syslog_path = syslog:5514
+# Identifies this application in the JSON records (application_id field),
+# so the log server can tell apart applications sharing the channel.
+application_id = nationale-verwijsindex-crypto-service-api
 # Include exception/stack traces in JSON logs
 include_traces = True
 # Whether to display debug logs in the console

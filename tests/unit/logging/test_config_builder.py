@@ -46,38 +46,59 @@ def test_build_console_uses_json_when_traces_excluded() -> None:
     assert conf["handlers"]["console"]["formatter"] == "json"
 
 
+_SYSLOG_HANDLERS = ("syslog_app", "syslog_siem", "syslog_public_inspect", "syslog_debug")
+
+
 @pytest.mark.parametrize(
-    "field,handler_name,filter_name",
+    "handler_name,filter_name",
     [
-        ("app_path", "app_syslog", "app_filter"),
-        ("siem_path", "siem", "siem_filter"),
-        ("public_inspect_path", "public_inspect", "public_inspect_filter"),
+        ("syslog_app", "app_filter"),
+        ("syslog_siem", "siem_filter"),
+        ("syslog_public_inspect", "public_inspect_filter"),
     ],
 )
-def test_build_path_adds_handler_with_filter(field: str, handler_name: str, filter_name: str) -> None:
-    conf = _build(**{field: "host:514"})
+def test_build_syslog_path_adds_handler_with_filter(handler_name: str, filter_name: str) -> None:
+    conf = _build(syslog_path="host:514")
     assert handler_name in conf["handlers"]
     handler = conf["handlers"][handler_name]
     assert handler["address"] == ("host", 514)
     assert filter_name in handler["filters"]
 
 
-def test_build_debug_path_adds_handler_to_root_and_app() -> None:
-    conf = _build(debug_path="host:516")
-    assert "debug" in conf["handlers"]
-    assert "debug" in conf["loggers"]["app"]["handlers"]
-    assert "debug" in conf["root"]["handlers"]
-    assert conf["handlers"]["debug"]["formatter"] == "json_traces"
+def test_build_syslog_debug_handler_added_to_root_and_app() -> None:
+    conf = _build(syslog_path="host:516")
+    assert "syslog_debug" in conf["handlers"]
+    assert "syslog_debug" in conf["loggers"]["app"]["handlers"]
+    assert "syslog_debug" in conf["root"]["handlers"]
+    assert conf["handlers"]["syslog_debug"]["formatter"] == "json_debug"
 
 
-def test_build_all_paths_configured() -> None:
-    conf = _build(
-        app_path="h:514",
-        siem_path="h:515",
-        public_inspect_path="h:516",
-        debug_path="h:517",
-    )
-    assert {"console", "app_syslog", "siem", "public_inspect", "debug"} == set(conf["handlers"].keys())
+def test_all_streams_share_the_single_syslog_channel() -> None:
+    conf = _build(syslog_path="logserver:514")
+
+    assert {"console", *_SYSLOG_HANDLERS} == set(conf["handlers"].keys())
+    for name in _SYSLOG_HANDLERS:
+        assert conf["handlers"][name]["address"] == ("logserver", 514)
+
+    formatters = {conf["handlers"][name]["formatter"] for name in _SYSLOG_HANDLERS}
+    stream_ids = {conf["formatters"][formatter].get("stream_id") for formatter in formatters}
+    assert stream_ids == {"app", "siem", "public_inspect", "debug"}
+
+
+def test_application_id_is_stamped_on_all_json_formatters() -> None:
+    conf = _build(syslog_path="logserver:514", application_id="nationale-verwijsindex-crypto-service-api")
+
+    for name, formatter in conf["formatters"].items():
+        if name == "plain":
+            assert "application_id" not in formatter
+        else:
+            assert formatter["application_id"] == "nationale-verwijsindex-crypto-service-api"
+
+
+def test_no_application_id_without_config() -> None:
+    conf = _build(syslog_path="logserver:514")
+    for formatter in conf["formatters"].values():
+        assert "application_id" not in formatter
 
 
 def test_syslog_handler_parses_host_port_and_filters() -> None:
