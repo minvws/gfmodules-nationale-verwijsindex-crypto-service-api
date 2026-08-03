@@ -21,13 +21,11 @@ class HsmApiCryptoService(CryptoService):
         module: str,
         slot: str,
         hash_key_id: str,
-        support_sha1: bool = False,
     ):
         logger.debug(f"Initializing HSM API service: module={module}, slot={slot}")
         self._http = http
         self.module = module
         self.slot = slot
-        self.support_sha1 = support_sha1
         self.hash_key_id = hash_key_id
 
     def health_check(self) -> bool:
@@ -80,10 +78,8 @@ class HsmApiCryptoService(CryptoService):
             raise InvalidJweError("Missing 'alg' in JWE header")
 
         alg_map = {
-            "RSA-OAEP-256": "sha256",
+            "RSA-OAEP": "sha1",
         }
-        if self.support_sha1:
-            alg_map["RSA-OAEP"] = "sha1"
 
         hash_method = alg_map.get(alg, None)
         if not hash_method:
