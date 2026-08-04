@@ -28,7 +28,7 @@ def test_unhandled_exception_handler_logs_and_returns_500(
     response = application._unhandled_exception_handler(request, exc)
 
     assert response.status_code == 500
-    assert json.loads(response.body) == {"error": "Internal server error"} # type: ignore
+    assert json.loads(response.body) == {"error": "Internal server error"}  # type: ignore
     log_event.assert_called_once_with(
         application.logger,
         SYS_UNHANDLED_EXCEPTION,
@@ -40,10 +40,12 @@ def test_unhandled_exception_handler_logs_and_returns_500(
     )
 
 
-def test_lifespan_logs_shutdown_reason_on_exit(mocker: MockerFixture) -> None:
+def test_lifespan_logs_shutdown_reason_on_exit(
+    mocker: MockerFixture, monkeypatch: pytest.MonkeyPatch
+) -> None:
     log_event = mocker.patch("app.application.log_event")
     mocker.patch("app.application._read_version", return_value="9.9.9")
-    application._shutdown_reason = "graceful"
+    monkeypatch.setattr(application, "_shutdown_reason", "graceful")
 
     async def _exercise() -> None:
         async with application._lifespan(MagicMock()):
@@ -66,7 +68,7 @@ def test_emit_app_started_logs_sys_app_started(
     mocker.patch("app.application._read_version", return_value="1.2.3")
     log_event = mocker.patch("app.application.log_event")
 
-    application._emit_app_started(use_config.app)
+    application._emit_app_started(use_config)
 
     log_event.assert_called_once_with(
         application.logger,
@@ -82,18 +84,16 @@ def test_emit_app_started_logs_sys_app_started(
 
 def test_excepthook_logs_sys_app_crashed_for_uncaught_exception(
     mocker: MockerFixture,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     mocker.patch("app.application._read_version", return_value="9.9.9")
     log_event = mocker.patch("app.application.log_event")
-    previous_excepthook = sys.excepthook
+    monkeypatch.setattr(sys, "excepthook", sys.excepthook)
+    application._install_excepthook()
     try:
-        application._install_excepthook()
-        try:
-            raise RuntimeError("boom")
-        except RuntimeError:
-            sys.excepthook(*sys.exc_info())
-    finally:
-        sys.excepthook = previous_excepthook
+        raise RuntimeError("boom")
+    except RuntimeError as exc:
+        sys.excepthook(type(exc), exc, exc.__traceback__)
 
     assert application._shutdown_reason == "crash"
     assert log_event.call_count == 1
@@ -127,18 +127,17 @@ def test_create_fastapi_app_logs_sys_unhandled_exception_on_startup_failure(
     )
 
 
-def test_excepthook_skips_keyboard_interrupt(mocker: MockerFixture) -> None:
+def test_excepthook_skips_keyboard_interrupt(
+    mocker: MockerFixture, monkeypatch: pytest.MonkeyPatch
+) -> None:
     log_event = mocker.patch("app.application.log_event")
-    previous_excepthook = sys.excepthook
     default_hook = mocker.patch("sys.__excepthook__")
+    monkeypatch.setattr(sys, "excepthook", sys.excepthook)
+    application._install_excepthook()
     try:
-        application._install_excepthook()
-        try:
-            raise KeyboardInterrupt()
-        except KeyboardInterrupt:
-            sys.excepthook(*sys.exc_info())
-    finally:
-        sys.excepthook = previous_excepthook
+        raise KeyboardInterrupt()
+    except KeyboardInterrupt as exc:
+        sys.excepthook(type(exc), exc, exc.__traceback__)
 
     log_event.assert_not_called()
     default_hook.assert_called_once()

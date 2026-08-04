@@ -76,8 +76,9 @@ def test_decrypt_jwe_payload_returns_parsed_json() -> None:
 
 def test_decrypt_jwe_payload_raises_on_missing_kid() -> None:
     svc = _MockCryptoService(plaintext=b'{"subject": "x"}')
+    token = _make_test_jwe(b'{"subject": "x"}', kid=None)
     with pytest.raises(InvalidJweError):
-        svc.decrypt_jwe_payload(_make_test_jwe(b'{"subject": "x"}', kid=None))
+        svc.decrypt_jwe_payload(token)
 
 
 def test_decrypt_jwe_payload_wraps_invalid_compact_serialization() -> None:
@@ -88,14 +89,16 @@ def test_decrypt_jwe_payload_wraps_invalid_compact_serialization() -> None:
 
 def test_decrypt_jwe_payload_propagates_crypto_error() -> None:
     svc = _MockCryptoService(plaintext=CryptoError("bad"))
+    token = _make_test_jwe(b'{"x":1}')
     with pytest.raises(CryptoError):
-        svc.decrypt_jwe_payload(_make_test_jwe(b'{"x":1}'))
+        svc.decrypt_jwe_payload(token)
 
 
 def test_decrypt_jwe_payload_wraps_unexpected_errors() -> None:
     svc = _MockCryptoService(plaintext=RuntimeError("boom"))
+    token = _make_test_jwe(b'{"x":1}')
     with pytest.raises(CryptoError):
-        svc.decrypt_jwe_payload(_make_test_jwe(b'{"x":1}'))
+        svc.decrypt_jwe_payload(token)
 
 
 def test_decrypt_jwe_payload_with_real_decryption_round_trip() -> None:

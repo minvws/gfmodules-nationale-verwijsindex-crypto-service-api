@@ -44,8 +44,10 @@ def test_decrypt_and_unblind_propagates_crypto_error(
     pseudonym_service: PseudonymService, crypto_service_mock: MagicMock
 ) -> None:
     crypto_service_mock.decrypt_jwe_payload.side_effect = CryptoError("nope")
+    encrypted_jwe = "JWE"
+    blind_factor = "AAAA"
     with pytest.raises(CryptoError):
-        pseudonym_service.decrypt_and_unblind("JWE", "AAAA")
+        pseudonym_service.decrypt_and_unblind(encrypted_jwe, blind_factor)
 
 
 @pytest.mark.parametrize(
@@ -75,8 +77,10 @@ def test_decrypt_and_unblind_rejects_invalid_subject(
     crypto_service_mock: MagicMock,
 ) -> None:
     crypto_service_mock.decrypt_jwe_payload.return_value = payload
+    encrypted_jwe = "JWE"
+    blind_factor = _b64(b"blind-factor")
     with pytest.raises(InvalidJweError):
-        pseudonym_service.decrypt_and_unblind("JWE", _b64(b"blind-factor"))
+        pseudonym_service.decrypt_and_unblind(encrypted_jwe, blind_factor)
 
 
 def test_hash_returns_urlsafe_b64(
@@ -97,9 +101,11 @@ def test_decrypt_and_unblind_logs_pse_exchange_failed_on_crypto_error(
 ) -> None:
     crypto_service_mock.decrypt_jwe_payload.side_effect = CryptoError("nope")
     log_event = mocker.patch("app.services.pseudonym_service.log_event")
+    encrypted_jwe = "JWE"
+    blind_factor = "AAAA"
 
     with pytest.raises(CryptoError):
-        pseudonym_service.decrypt_and_unblind("JWE", "AAAA")
+        pseudonym_service.decrypt_and_unblind(encrypted_jwe, blind_factor)
 
     log_event.assert_called_once_with(
         pseudonym_service_module.logger,
@@ -120,9 +126,11 @@ def test_decrypt_and_unblind_logs_pse_exchange_failed_on_invalid_subject(
         "subject": "wrong-prefix:abc"
     }
     log_event = mocker.patch("app.services.pseudonym_service.log_event")
+    encrypted_jwe = "JWE"
+    blind_factor = _b64(b"\x00" * 32)
 
     with pytest.raises(InvalidJweError):
-        pseudonym_service.decrypt_and_unblind("JWE", _b64(b"\x00" * 32))
+        pseudonym_service.decrypt_and_unblind(encrypted_jwe, blind_factor)
 
     log_event.assert_called_once_with(
         pseudonym_service_module.logger,
