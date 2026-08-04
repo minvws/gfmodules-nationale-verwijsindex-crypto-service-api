@@ -21,7 +21,7 @@ def container_config(binder: inject.Binder) -> None:
         logger.debug("Initializing mock crypto service")
         crypto_service = MockCryptoService()
     else:
-        logger.debug(f"Initializing HSM API at {config.hsm_api.url}")
+        logger.debug("Initializing HSM API at %s", config.hsm_api.url)
         http = HttpService(
             endpoint=config.hsm_api.url,
             timeout=config.hsm_api.timeout,

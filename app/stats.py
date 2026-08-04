@@ -1,5 +1,5 @@
 import time
-from typing import Awaitable, Callable
+from collections.abc import Awaitable, Callable
 
 import statsd
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -27,19 +27,15 @@ class Stats:
 class NoopStats(Stats):
     def timing(self, key: str, value: int) -> None:
         """Empty method due to NoopStats implementation"""
-        pass
 
     def inc(self, key: str, count: int = 1, rate: int = 1) -> None:
         """Empty method due to NoopStats implementation"""
-        pass
 
     def dec(self, key: str, count: int = 1, rate: int = 1) -> None:
         """Empty method due to NoopStats implementation"""
-        pass
 
     def gauge(self, key: str, value: int, delta: bool = False) -> None:
         """Empty method due to NoopStats implementation"""
-        pass
 
 
 class Statsd(Stats):
@@ -74,7 +70,6 @@ def setup_stats(config: ConfigStats) -> None:
 
 
 def get_stats() -> Stats:
-    global _STATS
     return _STATS
 
 

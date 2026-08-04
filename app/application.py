@@ -3,11 +3,12 @@ import logging
 import os
 import signal
 import sys
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from logging.config import dictConfig
 from pathlib import Path
 from types import TracebackType
-from typing import Any, AsyncIterator
+from typing import Any
 
 import urllib3
 import uvicorn
@@ -127,6 +128,7 @@ def _install_signal_handlers() -> None:
                 _shutdown_reason = f"signal:{signal.Signals(signum).name}"
                 if callable(prev):
                     prev(s, frame)
+
             return _handler
 
         try:
@@ -182,7 +184,6 @@ def _emit_app_started(conf: ConfigApp) -> None:
 
 @asynccontextmanager
 async def _lifespan(_: FastAPI) -> AsyncIterator[None]:
-    global _shutdown_reason
     try:
         yield
     finally:

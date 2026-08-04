@@ -4,7 +4,8 @@ import logging
 
 from Crypto.Cipher import AES
 from requests import JSONDecodeError
-from requests.exceptions import ConnectionError as RequestsConnectionError, Timeout
+from requests.exceptions import ConnectionError as RequestsConnectionError
+from requests.exceptions import Timeout
 
 from app.data import Pkc11Mechanism
 from app.exceptions.exception import CryptoError, InvalidJweError, KeyNotFoundError
@@ -22,7 +23,7 @@ class HsmApiCryptoService(CryptoService):
         slot: str,
         hash_key_id: str,
     ):
-        logger.debug(f"Initializing HSM API service: module={module}, slot={slot}")
+        logger.debug("Initializing HSM API service: module=%s, slot=%s", module, slot)
         self._http = http
         self.module = module
         self.slot = slot
@@ -31,15 +32,17 @@ class HsmApiCryptoService(CryptoService):
     def health_check(self) -> bool:
         try:
             r = self._http.do_request("GET")
-        except (RequestsConnectionError, Timeout) as e:
-            logger.debug(f"HSM API unreachable: {e}")
+        except (RequestsConnectionError, Timeout):
+            logger.exception("HSM API unreachable")
             return False
         if r.status_code != 200:
             logger.debug(
-                f"HSM API health check failed with status {r.status_code}: {r.text}"
+                "HSM API health check failed with status %s: %s",
+                r.status_code,
+                r.text,
             )
             return False
-        logger.debug(f"HSM API health check response: {r.json().get('message')}")
+        logger.debug("HSM API health check response: %s", r.json().get("message"))
         return True
 
     def get_public_key(self, key_id: str) -> str:
@@ -61,7 +64,7 @@ class HsmApiCryptoService(CryptoService):
 
     def decrypt_jwe(self, jwe_token: str, key_id: str) -> bytes:
         """Decrypt RSA-OAEP(+A256GCM) JWE: unwrap CEK in HSM, decrypt locally."""
-        logger.debug(f"Decrypting JWE with key {key_id} using HSM API")
+        logger.debug("Decrypting JWE with key %s using HSM API", key_id)
         parts = jwe_token.split(".")
         if len(parts) != 5:
             raise InvalidJweError("Invalid JWE compact serialization")
@@ -100,7 +103,7 @@ class HsmApiCryptoService(CryptoService):
         return cipher.decrypt_and_verify(ciphertext, tag)
 
     def hash(self, data: bytes) -> bytes:
-        logger.debug(f"Hashing {len(data)} bytes using HSM API")
+        logger.debug("Hashing %s bytes using HSM API", len(data))
         r = self._http.do_request(
             "POST",
             sub_route=f"hsm/{self.module}/{self.slot}/sign",
@@ -120,7 +123,7 @@ class HsmApiCryptoService(CryptoService):
     def _rsa_oaep_unwrap(
         self, key_id: str, encrypted_key: bytes, hash_method: str
     ) -> bytes:
-        logger.debug(f"Unwrapping CEK with RSA-OAEP using key {key_id}")
+        logger.debug("Unwrapping CEK with RSA-OAEP using key %s", key_id)
         r = self._http.do_request(
             "POST",
             sub_route=f"hsm/{self.module}/{self.slot}/decrypt",

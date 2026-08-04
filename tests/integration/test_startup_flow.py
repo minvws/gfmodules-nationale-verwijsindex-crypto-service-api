@@ -1,5 +1,5 @@
-from fastapi import FastAPI
 import pytest
+from fastapi import FastAPI
 from pytest_mock import MockerFixture
 
 from app import application

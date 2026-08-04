@@ -5,18 +5,18 @@ from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
-from Crypto.Cipher import AES
-from Crypto.Cipher import PKCS1_OAEP
+from Crypto.Cipher import AES, PKCS1_OAEP
 from Crypto.Hash import SHA1
 from Crypto.PublicKey import RSA
 from jwcrypto import jwe, jwk
-from requests.exceptions import ConnectionError as RequestsConnectionError, Timeout
+from requests.exceptions import ConnectionError as RequestsConnectionError
+from requests.exceptions import Timeout
 
+from app.data import Pkc11Mechanism
 from app.exceptions.exception import CryptoError, InvalidJweError, KeyNotFoundError
 from app.services.crypto.hsm_api_crypto_service import (
     HsmApiCryptoService,
 )
-from app.data import Pkc11Mechanism
 
 
 def _resp(status: int, body: Any = None, text: str = "") -> MagicMock:

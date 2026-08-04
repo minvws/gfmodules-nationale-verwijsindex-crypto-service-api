@@ -7,13 +7,12 @@ from app import config as config_module
 from app.config import (
     Config,
 )
+from app.services.crypto.crypto_service import CryptoService
+from app.services.http import HttpService
+from app.services.pseudonym_service import PseudonymService
 from tests.unit.test_config import get_test_config
 
 config_module._CONFIG = get_test_config()
-
-from app.services.crypto.crypto_service import CryptoService  # noqa: E402
-from app.services.http import HttpService  # noqa: E402
-from app.services.pseudonym_service import PseudonymService  # noqa: E402
 
 
 @pytest.fixture

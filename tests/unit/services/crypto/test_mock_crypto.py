@@ -1,4 +1,5 @@
 import pytest
+
 from app.services.crypto.mock_crypto_service import MockCryptoService
 
 
