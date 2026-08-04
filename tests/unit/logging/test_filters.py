@@ -1,5 +1,4 @@
 import logging
-from typing import List
 
 import pytest
 
@@ -40,7 +39,7 @@ def _record(name: str = "app.test", **extra: object) -> logging.LogRecord:
         "siem-pass", "siem-block-app", "siem-block-none",
     ],
 )
-def test_stream_filters(filter_cls: type, stream: List[LoggingStreams] | None, expected: bool) -> None:
+def test_stream_filters(filter_cls: type, stream: list[LoggingStreams] | None, expected: bool) -> None:
     record = _record() if stream is None else _record(stream=stream)
     assert filter_cls().filter(record) is expected
 

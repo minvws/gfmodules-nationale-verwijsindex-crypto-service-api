@@ -77,11 +77,11 @@ class CryptoService(ABC):
             payload = self.decrypt_jwe(jwe_token, kid)
             return json.loads(payload.decode("utf-8"))
         except (jwe.InvalidJWEData, InvalidJweError) as e:
-            logger.debug("JWE decrypt failed: invalid JWE", exc_info=e)
+            logger.exception("JWE decrypt failed: invalid JWE")
             raise InvalidJweError("Invalid JWE format") from e
-        except CryptoError as e:
-            logger.debug("JWE decrypt failed: crypto error", exc_info=e)
+        except CryptoError:
+            logger.exception("JWE decrypt failed: crypto error")
             raise
         except Exception as e:
-            logger.debug("JWE decrypt failed: unexpected error", exc_info=e)
+            logger.exception("JWE decrypt failed: unexpected error")
             raise CryptoError("Failed to decrypt JWE") from e

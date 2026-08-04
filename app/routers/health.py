@@ -8,7 +8,6 @@ from app.container import get_crypto_service
 from app.logging.events import HEALTH_UNHEALTHY, log_event
 from app.services.crypto.crypto_service import CryptoService
 
-
 logger = logging.getLogger(__name__)
 router = APIRouter()
 

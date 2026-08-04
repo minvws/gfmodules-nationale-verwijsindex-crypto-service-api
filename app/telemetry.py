@@ -29,5 +29,4 @@ def setup_telemetry(app: fastapi.FastAPI, config: ConfigTelemetry) -> None:
 
 
 def get_tracer() -> trace.Tracer | None:
-    global _TRACER
     return _TRACER

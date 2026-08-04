@@ -4,8 +4,7 @@ import os
 from enum import Enum
 from typing import Any
 
-from pydantic import BaseModel, ValidationError, Field
-
+from pydantic import BaseModel, Field, ValidationError
 
 logger = logging.getLogger(__name__)
 
@@ -101,7 +100,6 @@ def reset_config() -> None:
 
 def get_config(path: str | None = None) -> Config:
     global _CONFIG
-    global _PATH
 
     if _CONFIG is not None:
         return _CONFIG
@@ -117,6 +115,6 @@ def get_config(path: str | None = None) -> Config:
         _CONFIG = Config(**ini_data)
     except ValidationError as e:
         print(f"Configuration validation error: {e}")
-        raise e
+        raise
 
     return _CONFIG

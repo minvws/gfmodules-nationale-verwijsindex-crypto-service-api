@@ -23,7 +23,7 @@ def public_key(
     try:
         pem = crypto_service.get_public_key(key_id)
     except CryptoError as e:
-        logger.error(f"CryptoError occurred: {e.error_message}")
+        logger.exception("CryptoError occurred")
         return JSONResponse(
             content={"error": e.error_message}, status_code=e.status_code
         )
@@ -57,7 +57,7 @@ def process(
             status_code=200,
         )
     except CryptoError as e:
-        logger.error(f"CryptoError occurred: {e.error_message}")
+        logger.exception("CryptoError occurred")
         return JSONResponse(
             content={"error": e.error_message}, status_code=e.status_code
         )

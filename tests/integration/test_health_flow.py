@@ -1,4 +1,3 @@
-from typing import Dict
 from unittest.mock import MagicMock
 
 import pytest
@@ -18,7 +17,7 @@ def test_health_endpoint_reflects_crypto_status(
     crypto_stub: MagicMock,
     healthy: bool,
     expected_status: int,
-    expected_body: Dict[str, object],
+    expected_body: dict[str, object],
 ) -> None:
     crypto_stub.health_check.return_value = healthy
 

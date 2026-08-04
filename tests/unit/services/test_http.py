@@ -2,7 +2,8 @@ from typing import Any
 
 import pytest
 from pytest_mock import MockerFixture
-from requests.exceptions import ConnectionError as RequestsConnectionError, Timeout
+from requests.exceptions import ConnectionError as RequestsConnectionError
+from requests.exceptions import Timeout
 
 from app.services.http import HttpService
 
