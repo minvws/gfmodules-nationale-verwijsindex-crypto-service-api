@@ -46,7 +46,12 @@ def test_build_console_uses_json_when_traces_excluded() -> None:
     assert conf["handlers"]["console"]["formatter"] == "json"
 
 
-_SYSLOG_HANDLERS = ("syslog_app", "syslog_siem", "syslog_public_inspect", "syslog_debug")
+_SYSLOG_HANDLERS = (
+    "syslog_app",
+    "syslog_siem",
+    "syslog_public_inspect",
+    "syslog_debug",
+)
 
 
 @pytest.mark.parametrize(
@@ -57,7 +62,9 @@ _SYSLOG_HANDLERS = ("syslog_app", "syslog_siem", "syslog_public_inspect", "syslo
         ("syslog_public_inspect", "public_inspect_filter"),
     ],
 )
-def test_build_syslog_path_adds_handler_with_filter(handler_name: str, filter_name: str) -> None:
+def test_build_syslog_path_adds_handler_with_filter(
+    handler_name: str, filter_name: str
+) -> None:
     conf = _build(syslog_path="host:514")
     assert handler_name in conf["handlers"]
     handler = conf["handlers"][handler_name]
@@ -76,23 +83,31 @@ def test_build_syslog_debug_handler_added_to_root_and_app() -> None:
 def test_all_streams_share_the_single_syslog_channel() -> None:
     conf = _build(syslog_path="logserver:514")
 
-    assert {"console", *_SYSLOG_HANDLERS} == set(conf["handlers"].keys())
+    assert set(conf["handlers"].keys()) == {"console", *_SYSLOG_HANDLERS}
     for name in _SYSLOG_HANDLERS:
         assert conf["handlers"][name]["address"] == ("logserver", 514)
 
     formatters = {conf["handlers"][name]["formatter"] for name in _SYSLOG_HANDLERS}
-    stream_ids = {conf["formatters"][formatter].get("stream_id") for formatter in formatters}
+    stream_ids = {
+        conf["formatters"][formatter].get("stream_id") for formatter in formatters
+    }
     assert stream_ids == {"app", "siem", "public_inspect", "debug"}
 
 
 def test_application_id_is_stamped_on_all_json_formatters() -> None:
-    conf = _build(syslog_path="logserver:514", application_id="nationale-verwijsindex-crypto-service-api")
+    conf = _build(
+        syslog_path="logserver:514",
+        application_id="nationale-verwijsindex-crypto-service-api",
+    )
 
     for name, formatter in conf["formatters"].items():
         if name == "plain":
             assert "application_id" not in formatter
         else:
-            assert formatter["application_id"] == "nationale-verwijsindex-crypto-service-api"
+            assert (
+                formatter["application_id"]
+                == "nationale-verwijsindex-crypto-service-api"
+            )
 
 
 def test_no_application_id_without_config() -> None:
