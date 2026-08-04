@@ -4,7 +4,6 @@ import sys
 from unittest.mock import MagicMock
 
 import pytest
-from pytest import MonkeyPatch
 from pytest_mock import MockerFixture
 
 from app import application
@@ -42,7 +41,7 @@ def test_unhandled_exception_handler_logs_and_returns_500(
 
 
 def test_lifespan_logs_shutdown_reason_on_exit(
-    mocker: MockerFixture, monkeypatch: MonkeyPatch
+    mocker: MockerFixture, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     log_event = mocker.patch("app.application.log_event")
     mocker.patch("app.application._read_version", return_value="9.9.9")
@@ -85,7 +84,7 @@ def test_emit_app_started_logs_sys_app_started(
 
 def test_excepthook_logs_sys_app_crashed_for_uncaught_exception(
     mocker: MockerFixture,
-    monkeypatch: MonkeyPatch,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     mocker.patch("app.application._read_version", return_value="9.9.9")
     log_event = mocker.patch("app.application.log_event")
@@ -129,7 +128,7 @@ def test_create_fastapi_app_logs_sys_unhandled_exception_on_startup_failure(
 
 
 def test_excepthook_skips_keyboard_interrupt(
-    mocker: MockerFixture, monkeypatch: MonkeyPatch
+    mocker: MockerFixture, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     log_event = mocker.patch("app.application.log_event")
     default_hook = mocker.patch("sys.__excepthook__")
