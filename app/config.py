@@ -45,9 +45,6 @@ class ConfigHsmApi(BaseModel):
     key_path: str | None = None
     timeout: int = Field(default=30, gt=0)
     verify_ca: str | bool = Field(default=True)
-    support_sha1: bool = Field(
-        default=False
-    )  # @TODO remove this when HSM-API supports SHA-256
 
 
 class ConfigTelemetry(BaseModel):

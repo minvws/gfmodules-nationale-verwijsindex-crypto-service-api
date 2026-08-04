@@ -7,7 +7,7 @@ from unittest.mock import MagicMock
 import pytest
 from Crypto.Cipher import AES
 from Crypto.Cipher import PKCS1_OAEP
-from Crypto.Hash import SHA256
+from Crypto.Hash import SHA1
 from Crypto.PublicKey import RSA
 from jwcrypto import jwe, jwk
 from requests.exceptions import ConnectionError as RequestsConnectionError, Timeout
@@ -34,7 +34,6 @@ def service(http_mock: MagicMock) -> HsmApiCryptoService:
         module="m",
         slot="s",
         hash_key_id="hk",
-        support_sha1=False,
     )
 
 
@@ -43,7 +42,7 @@ def _b64u_nopad(data: bytes) -> str:
 
 
 def _make_jwe(
-    cek: bytes, plaintext: bytes, alg: str = "RSA-OAEP-256", enc: str = "A256GCM"
+    cek: bytes, plaintext: bytes, alg: str = "RSA-OAEP", enc: str = "A256GCM"
 ) -> tuple[str, bytes]:
     header = {"alg": alg, "enc": enc, "kid": "sk"}
     header_b64 = _b64u_nopad(json.dumps(header).encode())
@@ -65,7 +64,7 @@ def _make_jwe(
 
 
 def _create_real_jwe_compact(plaintext: bytes, key: jwk.JWK, kid: str = "sk") -> str:
-    header = {"alg": "RSA-OAEP-256", "enc": "A256GCM", "kid": kid}
+    header = {"alg": "RSA-OAEP", "enc": "A256GCM", "kid": kid}
     token = jwe.JWE(plaintext, json.dumps(header))
     token.add_recipient(key)
     return token.serialize(compact=True)
@@ -79,7 +78,7 @@ def _unwrap_cek_from_real_jwe(compact_jwe: str, key: jwk.JWK) -> bytes:
 
     private_pem = key.export_to_pem(private_key=True, password=None)
     rsa_key = RSA.import_key(private_pem)
-    unwrap = PKCS1_OAEP.new(rsa_key, hashAlgo=SHA256)
+    unwrap = PKCS1_OAEP.new(rsa_key, hashAlgo=SHA1)
     return unwrap.decrypt(encrypted_key)
 
 
@@ -156,8 +155,8 @@ def test_decrypt_jwe_round_trip(
     assert service.decrypt_jwe(token, "sk") == b"plaintext"
     call = http_mock.do_request.call_args
     assert call.kwargs["sub_route"] == "hsm/m/s/decrypt"
-    assert call.kwargs["data"]["mechanism"] == Pkc11Mechanism.RSA_PKCS_OAEP
-    assert call.kwargs["data"]["hashmethod"] == "sha256"
+    assert call.kwargs["data"]["mechanism"] == Pkc11Mechanism.RSA_PKCS_OAEP.value
+    assert call.kwargs["data"]["hashmethod"] == "sha1"
 
 
 def test_decrypt_jwe_round_trip_with_real_jwe(
@@ -181,45 +180,35 @@ def test_decrypt_jwe_rejects_malformed_compact_serialization(
 
 
 @pytest.mark.parametrize(
-    "alg,enc,support_sha1,err",
+    "alg,enc,err",
     [
-        ("none", "A256GCM", False, InvalidJweError),
-        ("RSA-OAEP", "A256GCM", False, InvalidJweError),
-        ("RSA-OAEP-256", "A128GCM", False, InvalidJweError),
-        ("RSA-OAEP-256", "", False, InvalidJweError),
+        ("none", "A256GCM", InvalidJweError),
+        ("RSA-OAEP-256", "A256GCM", InvalidJweError),
+        ("RSA-OAEP", "A128GCM", InvalidJweError),
+        ("RSA-OAEP", "", InvalidJweError),
     ],
-    ids=["bad-alg", "sha1-not-supported", "bad-enc", "missing-enc"],
+    ids=["bad-alg", "unsupported-alg", "bad-enc", "missing-enc"],
 )
 def test_decrypt_jwe_validates_header_fields(
-    alg: str, enc: str, support_sha1: bool, err: type[Exception], http_mock: MagicMock
+    alg: str, enc: str, err: type[Exception], http_mock: MagicMock
 ) -> None:
-    svc = HsmApiCryptoService(
-        http_mock,
-        module="m",
-        slot="s",
-        hash_key_id="h",
-        support_sha1=support_sha1,
-    )
+    svc = HsmApiCryptoService(http_mock, module="m", slot="s", hash_key_id="h")
     cek = os.urandom(32)
     token, _ = _make_jwe(cek, b"plain", alg=alg, enc=enc)
     with pytest.raises(err):
         svc.decrypt_jwe(token, "sk")
 
 
-def test_decrypt_jwe_supports_sha1_when_enabled(http_mock: MagicMock) -> None:
-    svc = HsmApiCryptoService(
-        http_mock,
-        module="m",
-        slot="s",
-        hash_key_id="h",
-        support_sha1=True,
-    )
+def test_decrypt_jwe_supports_sha1(http_mock: MagicMock) -> None:
+    svc = HsmApiCryptoService(http_mock, module="m", slot="s", hash_key_id="h")
     cek = os.urandom(32)
     token, _ = _make_jwe(cek, b"plain", alg="RSA-OAEP")
     http_mock.do_request.return_value = _resp(
         200, {"result": base64.b64encode(cek).decode()}
     )
     assert svc.decrypt_jwe(token, "sk") == b"plain"
+    call = http_mock.do_request.call_args
+    assert call.kwargs["data"]["hashmethod"] == "sha1"
 
 
 def test_decrypt_jwe_rejects_wrong_cek_length(
