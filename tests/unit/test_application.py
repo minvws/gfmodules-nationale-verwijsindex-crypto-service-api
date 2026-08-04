@@ -28,7 +28,7 @@ def test_unhandled_exception_handler_logs_and_returns_500(
     response = application._unhandled_exception_handler(request, exc)
 
     assert response.status_code == 500
-    assert json.loads(response.body) == {"error": "Internal server error"} # type: ignore
+    assert json.loads(response.body) == {"error": "Internal server error"}  # type: ignore
     log_event.assert_called_once_with(
         application.logger,
         SYS_UNHANDLED_EXCEPTION,
@@ -66,7 +66,7 @@ def test_emit_app_started_logs_sys_app_started(
     mocker.patch("app.application._read_version", return_value="1.2.3")
     log_event = mocker.patch("app.application.log_event")
 
-    application._emit_app_started(use_config.app)
+    application._emit_app_started(use_config)
 
     log_event.assert_called_once_with(
         application.logger,

@@ -14,7 +14,7 @@ import uvicorn
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
-from app.config import ConfigApp, get_config
+from app.config import Config, get_config
 from app.logging.config_builder import LogConfigBuilder
 from app.logging.events import (
     SYS_APP_CRASHED,
@@ -67,7 +67,7 @@ def create_fastapi_app() -> FastAPI:
     try:
         fastapi = setup_fastapi()
         config = get_config()
-        _emit_app_started(config.app)
+        _emit_app_started(config)
         return fastapi
     except Exception as exc:
         log_event(
@@ -127,6 +127,7 @@ def _install_signal_handlers() -> None:
                 _shutdown_reason = f"signal:{signal.Signals(signum).name}"
                 if callable(prev):
                     prev(s, frame)
+
             return _handler
 
         try:
@@ -166,17 +167,16 @@ def _read_version() -> str:
         return "unknown"
 
 
-def _emit_app_started(conf: ConfigApp) -> None:
-    cfg = get_config()
+def _emit_app_started(config: Config) -> None:
     log_event(
         logger,
         SYS_APP_STARTED,
         "Application started",
         version=_read_version(),
         config_path=os.environ.get(_CONFIG_ENV, _DEFAULT_CONFIG_PATH),
-        mock_hsm=cfg.hsm_api.mock,
-        telemetry_enabled=cfg.telemetry.enabled,
-        stats_enabled=cfg.stats.enabled,
+        mock_hsm=config.hsm_api.mock,
+        telemetry_enabled=config.telemetry.enabled,
+        stats_enabled=config.stats.enabled,
     )
 
 
