@@ -12,7 +12,6 @@ from app.config import (
 def get_test_config() -> Config:
     return Config(
         app=ConfigApp(
-            nvi_ura_number="12345678",
             hashing_key_id="hashing-key",
         ),
         uvicorn=ConfigUvicorn(),
