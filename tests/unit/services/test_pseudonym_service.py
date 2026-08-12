@@ -13,7 +13,7 @@ from app.services.pseudonym_service import PseudonymService
 
 @pytest.fixture
 def pseudonym_service(crypto_service_mock: MagicMock) -> PseudonymService:
-    return PseudonymService(crypto_service=crypto_service_mock, nvi_ura_number="u")
+    return PseudonymService(crypto_service=crypto_service_mock)
 
 
 def _b64(data: bytes) -> str:
@@ -111,7 +111,6 @@ def test_decrypt_and_unblind_logs_pse_exchange_failed_on_crypto_error(
         pseudonym_service_module.logger,
         PSE_EXCHANGE_FAILED,
         "OPRF exchange failed: JWE decrypt failed",
-        ura_number="u",
         endpoint="/decrypt_and_hash",
         error_type="CryptoError",
     )
@@ -136,7 +135,6 @@ def test_decrypt_and_unblind_logs_pse_exchange_failed_on_invalid_subject(
         pseudonym_service_module.logger,
         PSE_EXCHANGE_FAILED,
         "OPRF exchange failed: invalid JWE subject",
-        ura_number="u",
         endpoint="/decrypt_and_hash",
         error_type="invalid_subject",
     )
@@ -159,6 +157,5 @@ def test_decrypt_and_unblind_logs_pse_exchange_ok_on_success(
         pseudonym_service_module.logger,
         PSE_EXCHANGE_OK,
         "OPRF exchange succeeded",
-        ura_number="u",
         endpoint="/decrypt_and_hash",
     )

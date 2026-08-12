@@ -15,9 +15,8 @@ _ENDPOINT = "/decrypt_and_hash"
 
 
 class PseudonymService:
-    def __init__(self, crypto_service: CryptoService, nvi_ura_number: str):
+    def __init__(self, crypto_service: CryptoService):
         self._crypto_service = crypto_service
-        self._nvi_ura_number = nvi_ura_number
 
     def decrypt_and_unblind(self, oprf_jwe: str, blind_factor: str) -> bytes:
         """
@@ -32,7 +31,6 @@ class PseudonymService:
                 logger,
                 PSE_EXCHANGE_FAILED,
                 "OPRF exchange failed: JWE decrypt failed",
-                ura_number=self._nvi_ura_number,
                 endpoint=_ENDPOINT,
                 error_type=type(e).__name__,
             )
@@ -44,7 +42,6 @@ class PseudonymService:
                 logger,
                 PSE_EXCHANGE_FAILED,
                 "OPRF exchange failed: invalid JWE subject",
-                ura_number=self._nvi_ura_number,
                 endpoint=_ENDPOINT,
                 error_type="invalid_subject",
             )
@@ -60,7 +57,6 @@ class PseudonymService:
             logger,
             PSE_EXCHANGE_OK,
             "OPRF exchange succeeded",
-            ura_number=self._nvi_ura_number,
             endpoint=_ENDPOINT,
         )
         return result

@@ -40,7 +40,6 @@ def container_config(binder: inject.Binder) -> None:
 
     pseudonym_service = PseudonymService(
         crypto_service=crypto_service,
-        nvi_ura_number=config.app.nvi_ura_number,
     )
     binder.bind(PseudonymService, pseudonym_service)
 
