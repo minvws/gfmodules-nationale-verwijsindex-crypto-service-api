@@ -5,7 +5,9 @@ from uuid import UUID
 
 import pytest
 from fastapi import FastAPI
+from fastapi.responses import JSONResponse
 from fastapi.testclient import TestClient
+from starlette.requests import Request
 
 from app.logging.context import (
     CLIENT_TRACE_ID_HEADER,
@@ -19,16 +21,30 @@ from app.logging.context import (
     method_var,
     request_id_var,
 )
-from app.logging.middleware import RequestContextMiddleware
+from app.logging.middleware import RequestContextMiddleware, bind_request_context
 
 CORRELATION_ID = "some-generated-id"
 
+
+def _unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+    with bind_request_context(request) as context:
+        response = JSONResponse(
+            status_code=500,
+            content={
+                "correlation_id": correlation_id_var.get(),
+                "request_id": request_id_var.get(),
+            },
+        )
+        if context is not None:
+            context.apply_to(response)
+        return response
 
 
 @pytest.fixture
 def client() -> Iterator[TestClient]:
     app = FastAPI()
     app.add_middleware(RequestContextMiddleware)
+    app.add_exception_handler(Exception, _unhandled_exception_handler)
 
     @app.get("/ping")
     def _ping() -> dict[str, bool]:
@@ -42,7 +58,11 @@ def client() -> Iterator[TestClient]:
             "method": method_var.get(),
         }
 
-    with TestClient(app) as test_client:
+    @app.get("/boom")
+    def _boom() -> dict[str, Any]:
+        raise RuntimeError("kaboom")
+
+    with TestClient(app, raise_server_exceptions=False) as test_client:
         yield test_client
 
 
@@ -153,6 +173,21 @@ def test_fully_unsafe_correlation_id_falls_back_to_the_sentinel(
 
     assert response.json()["correlation_id"] == UNSET
     assert CORRELATION_ID_HEADER not in response.headers
+
+
+def test_context_is_restored_for_an_unhandled_exception(client: TestClient) -> None:
+    response = client.get("/boom", headers={CORRELATION_ID_HEADER: CORRELATION_ID})
+
+    assert response.status_code == 500
+    assert response.json()["correlation_id"] == CORRELATION_ID
+    assert response.json()["request_id"] != UNSET
+
+
+def test_correlation_id_is_echoed_on_a_500(client: TestClient) -> None:
+    response = client.get("/boom", headers={CORRELATION_ID_HEADER: CORRELATION_ID})
+
+    assert response.headers[CORRELATION_ID_HEADER] == CORRELATION_ID
+    assert response.headers[REQUEST_ID_HEADER]
 
 
 def test_context_does_not_leak_between_requests(client: TestClient) -> None:
