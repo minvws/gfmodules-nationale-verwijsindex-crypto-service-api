@@ -4,6 +4,8 @@ from typing import Any, Literal
 from requests import HTTPError, Response, request
 from requests.exceptions import ConnectionError, Timeout
 
+from app.logging.context import CORRELATION_ID_HEADER, UNSET, correlation_id_var
+
 logger = logging.getLogger(__name__)
 
 
@@ -49,11 +51,16 @@ class HttpService:
             elif data is not None:
                 data_args["json"] = data
 
+            outgoing_headers = dict(headers or {})
+            correlation_id = correlation_id_var.get()
+            if correlation_id != UNSET:
+                outgoing_headers[CORRELATION_ID_HEADER] = correlation_id
+
             response = request(
                 method=method,
                 url=f"{self._endpoint}/{sub_route}" if sub_route else self._endpoint,
                 params=params,
-                headers=headers,
+                headers=outgoing_headers,
                 timeout=self._timeout,
                 cert=cert,
                 verify=self._verify_ca,

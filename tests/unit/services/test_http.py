@@ -5,6 +5,7 @@ from pytest_mock import MockerFixture
 from requests.exceptions import ConnectionError as RequestsConnectionError
 from requests.exceptions import Timeout
 
+from app.logging.context import CORRELATION_ID_HEADER, correlation_id_var
 from app.services.http import HttpService
 
 PATCH_TARGET = "app.services.http.request"
@@ -108,3 +109,45 @@ def test_do_request_propagates_transport_errors(
     request_mock.side_effect = exc
     with pytest.raises(type(exc)):
         http_service.do_request("GET")
+
+
+def test_do_request_propagates_the_correlation_id(
+    request_mock: Any, http_service: HttpService
+) -> None:
+    token = correlation_id_var.set("some-generated-id")
+    try:
+        http_service.do_request("GET")
+    finally:
+        correlation_id_var.reset(token)
+
+    headers = request_mock.call_args.kwargs["headers"]
+    assert headers[CORRELATION_ID_HEADER] == "some-generated-id"
+
+
+def test_do_request_works_without_caller_headers(
+    request_mock: Any, http_service: HttpService
+) -> None:
+    http_service.do_request("GET")
+
+    assert request_mock.call_args.kwargs["headers"] == {}
+
+
+def test_do_request_omits_the_correlation_id_when_absent(
+    request_mock: Any, http_service: HttpService
+) -> None:
+    http_service.do_request("GET", headers={"Authorization": "Bearer x"})
+
+    assert request_mock.call_args.kwargs["headers"] == {"Authorization": "Bearer x"}
+
+
+def test_do_request_does_not_mutate_the_caller_headers(
+    request_mock: Any, http_service: HttpService
+) -> None:
+    headers = {"Authorization": "Bearer x"}
+    token = correlation_id_var.set("some-generated-id")
+    try:
+        http_service.do_request("GET", headers=headers)
+    finally:
+        correlation_id_var.reset(token)
+
+    assert headers == {"Authorization": "Bearer x"}
