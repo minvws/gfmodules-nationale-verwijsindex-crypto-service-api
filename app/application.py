@@ -222,7 +222,10 @@ def setup_fastapi() -> FastAPI:
         else FastAPI(docs_url=None, redoc_url=None, lifespan=_lifespan)
     )
 
-    fastapi.add_middleware(RequestContextMiddleware)
+    fastapi.add_middleware(
+        RequestContextMiddleware,
+        correlation_id_expected=config.logging.correlation_id_expected,
+    )
 
     routers = [default_router, health_router, crypto_router]
     for router in routers:

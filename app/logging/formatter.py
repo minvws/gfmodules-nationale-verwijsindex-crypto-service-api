@@ -4,7 +4,15 @@ import re
 from datetime import datetime, timezone
 from typing import Any
 
-from app.logging.context import client_trace_id_var, ip_var, request_id_var
+from app.logging.context import (
+    UNSET,
+    client_trace_id_var,
+    correlation_id_var,
+    endpoint_var,
+    ip_var,
+    method_var,
+    request_id_var,
+)
 
 _CONTROL_CHARS = re.compile(r"[\x00-\x1f\x7f]")
 
@@ -25,9 +33,12 @@ def _collect_context() -> dict[str, Any]:
         ("request_id", request_id_var),
         ("ip", ip_var),
         ("client_trace_id", client_trace_id_var),
+        ("correlation_id", correlation_id_var),
+        ("endpoint", endpoint_var),
+        ("method", method_var),
     ):
         value = var.get()
-        if value != "-":
+        if value != UNSET:
             out[key] = value
     return out
 

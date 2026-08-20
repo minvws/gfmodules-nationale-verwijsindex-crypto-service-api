@@ -19,6 +19,8 @@ application_id = nationale-verwijsindex-crypto-service-api
 include_traces = True
 # Whether to display debug logs in the console
 debug_logs_in_console = True
+# Log an error when a request arrives without an X-GF-Correlation-ID header
+correlation_id_expected = False
 
 [hsm_api]
 # If true, use a pass-through mock instead of calling the HSM API
