@@ -24,7 +24,7 @@ from app.logging.events import (
     SYS_UNHANDLED_EXCEPTION,
     log_event,
 )
-from app.logging.middleware import RequestContextMiddleware
+from app.logging.middleware import RequestContextMiddleware, restore_request_context
 from app.routers.crypto import router as crypto_router
 from app.routers.default import router as default_router
 from app.routers.health import router as health_router
@@ -196,6 +196,7 @@ async def _lifespan(_: FastAPI) -> AsyncIterator[None]:
             )
 
 
+@restore_request_context
 def _unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
     log_event(
         logger,
