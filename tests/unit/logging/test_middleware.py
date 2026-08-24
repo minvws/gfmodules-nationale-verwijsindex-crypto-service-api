@@ -7,8 +7,10 @@ import pytest
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 from fastapi.testclient import TestClient
+from pytest_mock import MockerFixture
 from starlette.requests import Request
 
+from app.application import setup_fastapi
 from app.logging.context import (
     CLIENT_TRACE_ID_HEADER,
     CORRELATION_ID_HEADER,
@@ -21,23 +23,20 @@ from app.logging.context import (
     method_var,
     request_id_var,
 )
-from app.logging.middleware import RequestContextMiddleware, bind_request_context
+from app.logging.middleware import RequestContextMiddleware, restore_request_context
 
 CORRELATION_ID = "some-generated-id"
 
 
+@restore_request_context
 def _unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
-    with bind_request_context(request) as context:
-        response = JSONResponse(
-            status_code=500,
-            content={
-                "correlation_id": correlation_id_var.get(),
-                "request_id": request_id_var.get(),
-            },
-        )
-        if context is not None:
-            context.apply_to(response)
-        return response
+    return JSONResponse(
+        status_code=500,
+        content={
+            "correlation_id": correlation_id_var.get(),
+            "request_id": request_id_var.get(),
+        },
+    )
 
 
 @pytest.fixture
@@ -202,3 +201,48 @@ def test_each_request_gets_a_distinct_request_id(client: TestClient) -> None:
     second = client.get("/ping").headers[REQUEST_ID_HEADER]
 
     assert first != second
+
+
+def test_real_app_keeps_correlation_context_on_an_unhandled_exception(
+    mocker: MockerFixture,
+) -> None:
+    app = setup_fastapi()
+
+    @app.get("/__boom")
+    def _boom() -> dict[str, Any]:
+        raise RuntimeError("kaboom")
+
+    logged: dict[str, str] = {}
+
+    def capture(*args: Any, **kwargs: Any) -> None:
+        logged["correlation_id"] = correlation_id_var.get()
+        logged["request_id"] = request_id_var.get()
+
+    mocker.patch("app.application.log_event", side_effect=capture)
+
+    response = TestClient(app, raise_server_exceptions=False).get(
+        "/__boom", headers={CORRELATION_ID_HEADER: CORRELATION_ID}
+    )
+
+    assert response.status_code == 500
+    assert response.headers[CORRELATION_ID_HEADER] == CORRELATION_ID
+    assert response.headers[REQUEST_ID_HEADER]
+    assert logged["correlation_id"] == CORRELATION_ID
+    assert logged["request_id"] == response.headers[REQUEST_ID_HEADER]
+
+
+def test_handler_still_responds_when_no_context_was_bound() -> None:
+    # Without RequestContextMiddleware there is nothing to rebind; the handler must not blow up.
+    app = FastAPI()
+
+    @app.get("/boom")
+    def _boom() -> dict[str, Any]:
+        raise RuntimeError("kaboom")
+
+    app.add_exception_handler(Exception, _unhandled_exception_handler)
+
+    response = TestClient(app, raise_server_exceptions=False).get("/boom")
+
+    assert response.status_code == 500
+    assert response.json()["correlation_id"] == UNSET
+    assert REQUEST_ID_HEADER not in response.headers
