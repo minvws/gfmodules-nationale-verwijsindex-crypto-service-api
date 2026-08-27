@@ -1,18 +1,36 @@
-from collections.abc import Iterator
+from collections.abc import Generator, Iterator
+from typing import Any
 from unittest.mock import MagicMock
 
+import gfmodules.logging as gflog
 import pytest
+from gfmodules.logging import ConfigLogging
+from gfmodules.logging.testing import reset_for_tests
 
 from app import config as config_module
 from app.config import (
     Config,
 )
+from app.logging.events import Log
 from app.services.crypto.crypto_service import CryptoService
 from app.services.http import HttpService
 from app.services.pseudonym_service import PseudonymService
 from tests.unit.test_config import get_test_config
 
 config_module._CONFIG = get_test_config()
+
+
+@pytest.fixture(autouse=True)
+def logging_catalogue() -> Generator[None, Any, None]:
+    gflog.configure(
+        config=ConfigLogging(debug_logs_in_console=True, access_logs=False),
+        loglevel="DEBUG",
+        catalogue=Log,
+    )
+    try:
+        yield
+    finally:
+        reset_for_tests()
 
 
 @pytest.fixture

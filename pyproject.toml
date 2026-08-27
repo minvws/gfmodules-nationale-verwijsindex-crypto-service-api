@@ -25,6 +25,9 @@ pyoprf = "0.9.4"
 statsd = "^4.0.1"
 requests = "^2.32.5"
 pycryptodome = "^3.20.0"
+gfmodules-python-logging-library = { git = "https://github.com/minvws/gfmodules-python-logging-library", tag = "v0.2.0", extras = [
+    "fastapi",
+] }
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^9.0.3"

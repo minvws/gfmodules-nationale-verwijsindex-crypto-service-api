@@ -3,10 +3,11 @@ from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
+from gfmodules.logging.testing import capture_records
 from pytest_mock import MockerFixture
 
 from app.exceptions.exception import CryptoError, InvalidJweError
-from app.logging.events import PSE_EXCHANGE_FAILED, PSE_EXCHANGE_OK
+from app.logging.events import Log
 from app.services import pseudonym_service as pseudonym_service_module
 from app.services.pseudonym_service import PseudonymService
 
@@ -94,26 +95,30 @@ def test_hash_returns_urlsafe_b64(
     crypto_service_mock.hash.assert_called_once_with(b"in")
 
 
+def _events(captured: Any, event_id: str) -> list[Any]:
+    return [
+        entry.record
+        for entry in captured.entries
+        if getattr(entry.record, "event_id", None) == event_id
+    ]
+
+
 def test_decrypt_and_unblind_logs_pse_exchange_failed_on_crypto_error(
     pseudonym_service: PseudonymService,
     crypto_service_mock: MagicMock,
     mocker: MockerFixture,
 ) -> None:
     crypto_service_mock.decrypt_jwe_payload.side_effect = CryptoError("nope")
-    log_event = mocker.patch("app.services.pseudonym_service.log_event")
-    encrypted_jwe = "JWE"
-    blind_factor = "AAAA"
 
-    with pytest.raises(CryptoError):
-        pseudonym_service.decrypt_and_unblind(encrypted_jwe, blind_factor)
+    with (
+        capture_records(pseudonym_service_module.logger.name) as captured,
+        pytest.raises(CryptoError),
+    ):
+        pseudonym_service.decrypt_and_unblind("JWE", "AAAA")
 
-    log_event.assert_called_once_with(
-        pseudonym_service_module.logger,
-        PSE_EXCHANGE_FAILED,
-        "OPRF exchange failed: JWE decrypt failed",
-        endpoint="/decrypt_and_hash",
-        error_type="CryptoError",
-    )
+    record = _events(captured, Log.PSE_EXCHANGE_FAILED.event_id)[0]
+    assert record.endpoint == "/decrypt_and_hash"
+    assert record.error_type == "CryptoError"
 
 
 def test_decrypt_and_unblind_logs_pse_exchange_failed_on_invalid_subject(
@@ -124,20 +129,15 @@ def test_decrypt_and_unblind_logs_pse_exchange_failed_on_invalid_subject(
     crypto_service_mock.decrypt_jwe_payload.return_value = {
         "subject": "wrong-prefix:abc"
     }
-    log_event = mocker.patch("app.services.pseudonym_service.log_event")
-    encrypted_jwe = "JWE"
-    blind_factor = _b64(b"\x00" * 32)
+    with (
+        capture_records(pseudonym_service_module.logger.name) as captured,
+        pytest.raises(InvalidJweError),
+    ):
+        pseudonym_service.decrypt_and_unblind("JWE", _b64(b"\x00" * 32))
 
-    with pytest.raises(InvalidJweError):
-        pseudonym_service.decrypt_and_unblind(encrypted_jwe, blind_factor)
-
-    log_event.assert_called_once_with(
-        pseudonym_service_module.logger,
-        PSE_EXCHANGE_FAILED,
-        "OPRF exchange failed: invalid JWE subject",
-        endpoint="/decrypt_and_hash",
-        error_type="invalid_subject",
-    )
+    record = _events(captured, Log.PSE_EXCHANGE_FAILED.event_id)[0]
+    assert record.endpoint == "/decrypt_and_hash"
+    assert record.error_type == "invalid_subject"
 
 
 def test_decrypt_and_unblind_logs_pse_exchange_ok_on_success(
@@ -149,13 +149,9 @@ def test_decrypt_and_unblind_logs_pse_exchange_ok_on_success(
         "subject": f"pseudonym:eval:{_b64(b'subject-bytes')}"
     }
     mocker.patch("app.services.pseudonym_service.pyoprf.unblind", return_value=b"plain")
-    log_event = mocker.patch("app.services.pseudonym_service.log_event")
 
-    pseudonym_service.decrypt_and_unblind("JWE", _b64(b"blind-factor"))
+    with capture_records(pseudonym_service_module.logger.name) as captured:
+        pseudonym_service.decrypt_and_unblind("JWE", _b64(b"blind-factor"))
 
-    log_event.assert_called_once_with(
-        pseudonym_service_module.logger,
-        PSE_EXCHANGE_OK,
-        "OPRF exchange succeeded",
-        endpoint="/decrypt_and_hash",
-    )
+    record = _events(captured, Log.PSE_EXCHANGE_OK.event_id)[0]
+    assert record.endpoint == "/decrypt_and_hash"

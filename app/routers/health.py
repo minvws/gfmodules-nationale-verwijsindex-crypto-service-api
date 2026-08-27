@@ -1,11 +1,12 @@
 import logging
 from typing import Annotated
 
+import gfmodules.logging as gflog
 from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
 
 from app.container import get_crypto_service
-from app.logging.events import HEALTH_UNHEALTHY, log_event
+from app.logging.events import Log
 from app.services.crypto.crypto_service import CryptoService
 
 logger = logging.getLogger(__name__)
@@ -29,14 +30,7 @@ def health(
 
     if not healthy:
         unhealthy = [name for name, status in components.items() if status != "ok"]
-        log_event(
-            logger,
-            HEALTH_UNHEALTHY,
-            "Health check unhealthy",
-            unhealthy_component=",".join(unhealthy),
-            status="error",
-            error_detail="",
-        )
+        gflog.emit(logger, Log.HEALTH_UNHEALTHY, "Health check unhealthy", fields={"unhealthy_component": ",".join(unhealthy), "status": "error", "error_detail": ""})
 
     return JSONResponse(
         status_code=200 if healthy else 503,

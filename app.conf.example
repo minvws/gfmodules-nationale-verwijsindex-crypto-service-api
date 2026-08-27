@@ -15,6 +15,8 @@ syslog_path = syslog:5514
 # Identifies this application in the JSON records (application_id field),
 # so the log server can tell apart applications sharing the channel.
 application_id = nationale-verwijsindex-crypto-service-api
+# Emit an access record per request.
+access_logs = False
 # Include exception/stack traces in JSON logs
 include_traces = True
 # Whether to display debug logs in the console
