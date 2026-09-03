@@ -1,11 +1,12 @@
 import base64
 import logging
 
+import gfmodules.logging as gflog
 import pyoprf
 
 from app.data import Pkc11Mechanism
 from app.exceptions.exception import CryptoError, InvalidJweError
-from app.logging.events import PSE_EXCHANGE_FAILED, PSE_EXCHANGE_OK, log_event
+from app.logging.events import Log
 from app.models.pseudonym import PseudonymResponse
 from app.services.crypto.crypto_service import CryptoService
 
@@ -27,24 +28,12 @@ class PseudonymService:
         try:
             jwe_data = self._crypto_service.decrypt_jwe_payload(oprf_jwe)
         except CryptoError as e:
-            log_event(
-                logger,
-                PSE_EXCHANGE_FAILED,
-                "OPRF exchange failed: JWE decrypt failed",
-                endpoint=_ENDPOINT,
-                error_type=type(e).__name__,
-            )
+            gflog.emit(logger, Log.PSE_EXCHANGE_FAILED, "OPRF exchange failed: JWE decrypt failed", fields={"endpoint": _ENDPOINT, "error_type": type(e).__name__})
             raise
 
         subject = jwe_data.get("subject") if isinstance(jwe_data, dict) else None
         if not isinstance(subject, str) or not subject.startswith("pseudonym:eval:"):
-            log_event(
-                logger,
-                PSE_EXCHANGE_FAILED,
-                "OPRF exchange failed: invalid JWE subject",
-                endpoint=_ENDPOINT,
-                error_type="invalid_subject",
-            )
+            gflog.emit(logger, Log.PSE_EXCHANGE_FAILED, "OPRF exchange failed: invalid JWE subject", fields={"endpoint": _ENDPOINT, "error_type": "invalid_subject"})
             raise InvalidJweError(
                 "JWE is invalid: subject does not start with pseudonym:eval:"
             )
@@ -53,12 +42,7 @@ class PseudonymService:
         bf = base64.urlsafe_b64decode(blind_factor)
         result: bytes = pyoprf.unblind(bf, subj)
 
-        log_event(
-            logger,
-            PSE_EXCHANGE_OK,
-            "OPRF exchange succeeded",
-            endpoint=_ENDPOINT,
-        )
+        gflog.emit(logger, Log.PSE_EXCHANGE_OK, "OPRF exchange succeeded", fields={"endpoint": _ENDPOINT})
         return result
 
     def encrypt_pseudonym(

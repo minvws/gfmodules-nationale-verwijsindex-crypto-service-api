@@ -1,44 +1,35 @@
 import logging
-from dataclasses import dataclass
-from typing import Any
 
-from app.logging.filters import LoggingStreams
+from gfmodules.logging import DefaultEventCatalogue, LogEvent, LoggingStreams
 
+_APP = LoggingStreams.APP
+_SIEM = LoggingStreams.SIEM
 
-@dataclass(frozen=True)
-class NVIEvent:
-    event_id: str
-    level: int
-    streams: tuple[LoggingStreams, ...]
+_Base = DefaultEventCatalogue
 
 
-SYS_APP_STARTED = NVIEvent("100601", logging.INFO, (LoggingStreams.APP,))
-SYS_APP_STOPPED = NVIEvent("100602", logging.INFO, (LoggingStreams.APP, LoggingStreams.SIEM))
-SYS_APP_CRASHED = NVIEvent("100602", logging.CRITICAL, (LoggingStreams.APP, LoggingStreams.SIEM))
-SYS_UNHANDLED_EXCEPTION = NVIEvent("100604", logging.ERROR, (LoggingStreams.APP,))
-SYS_MISSING_CORRELATION_ID = NVIEvent("100606", logging.ERROR, (LoggingStreams.APP, LoggingStreams.SIEM))
-SYS_CRYPTO_FAILED = NVIEvent("100607", logging.ERROR, (LoggingStreams.APP, LoggingStreams.SIEM))
+class Log(_Base):
+    SYS_APP_STARTED = _Base.SYS_APP_STARTED.replace(  # NVI-SYS-001
+        event_id="100601",
+        fields={
+            _APP: (
+                "version",
+                "config_path",
+                "mock_hsm",
+                "telemetry_enabled",
+                "stats_enabled",
+            ),
+        },
+    )
+    SYS_APP_STOPPED = _Base.SYS_APP_STOPPED.with_id("100602")  # NVI-SYS-002
+    SYS_APP_CRASHED = _Base.SYS_APP_CRASHED.with_id("100602")  # NVI-SYS-002
+    SYS_UNHANDLED_EXCEPTION = _Base.SYS_UNHANDLED_EXCEPTION.with_id(
+        "100604"
+    )  # NVI-SYS-004
+    SYS_MISSING_CORRELATION_ID = _Base.SYS_MISSING_CORRELATION_ID.with_id("100606")  # NVI-SYS-006
 
-PSE_EXCHANGE_FAILED = NVIEvent("900700", logging.ERROR, (LoggingStreams.APP, LoggingStreams.SIEM))
-PSE_EXCHANGE_OK = NVIEvent("900701", logging.DEBUG, (LoggingStreams.APP,))
+    SYS_CRYPTO_FAILED = LogEvent("100607", logging.ERROR, (_APP, _SIEM))
+    HEALTH_UNHEALTHY = LogEvent("100600", logging.ERROR, (_APP, _SIEM))
 
-HEALTH_UNHEALTHY = NVIEvent("100600", logging.ERROR, (LoggingStreams.APP, LoggingStreams.SIEM))
-
-# @TODO Add some extra ids in logging specs for access logging
-ACCESS_REQUEST = NVIEvent("001000", logging.INFO, (LoggingStreams.APP,))
-
-
-def log_event(
-    logger: logging.Logger,
-    event: NVIEvent,
-    message: str,
-    *,
-    exc_info: Any = None,
-    **fields: Any,
-) -> None:
-    extra: dict[str, Any] = {
-        "event_id": event.event_id,
-        "stream": list(event.streams),
-    }
-    extra.update(fields)
-    logger.log(event.level, message, extra=extra, exc_info=exc_info)
+    PSE_EXCHANGE_FAILED = LogEvent("900700", logging.ERROR, (_APP, _SIEM))
+    PSE_EXCHANGE_OK = LogEvent("900701", logging.DEBUG, (_APP,))

@@ -1,8 +1,9 @@
+from gfmodules.logging import ConfigLogging
+
 from app.config import (
     Config,
     ConfigApp,
     ConfigHsmApi,
-    ConfigLogging,
     ConfigStats,
     ConfigTelemetry,
     ConfigUvicorn,

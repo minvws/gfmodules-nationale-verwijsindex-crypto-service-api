@@ -15,8 +15,12 @@ def client() -> TestClient:
     return TestClient(app)
 
 
-def test_index_returns_logo_and_version(client: TestClient, mocker: MockerFixture) -> None:
-    mocker.patch("builtins.open", mock_open(read_data='{"version": "1.2.3", "git_ref": "abcd"}'))
+def test_index_returns_logo_and_version(
+    client: TestClient, mocker: MockerFixture
+) -> None:
+    mocker.patch(
+        "builtins.open", mock_open(read_data='{"version": "1.2.3", "git_ref": "abcd"}')
+    )
 
     response = client.get("/")
 
@@ -26,7 +30,9 @@ def test_index_returns_logo_and_version(client: TestClient, mocker: MockerFixtur
     assert "Commit: abcd" in response.text
 
 
-def test_index_handles_missing_version_file(client: TestClient, mocker: MockerFixture) -> None:
+def test_index_handles_missing_version_file(
+    client: TestClient, mocker: MockerFixture
+) -> None:
     mocker.patch("builtins.open", side_effect=FileNotFoundError)
 
     response = client.get("/")
@@ -35,14 +41,20 @@ def test_index_handles_missing_version_file(client: TestClient, mocker: MockerFi
     assert "No version information found" in response.text
 
 
-def test_version_json_returns_payload(client: TestClient, mocker: MockerFixture) -> None:
-    mocker.patch("builtins.open", mock_open(read_data='{"version": "1.0.0", "git_ref": "xyz"}'))
+def test_version_json_returns_payload(
+    client: TestClient, mocker: MockerFixture
+) -> None:
+    mocker.patch(
+        "builtins.open", mock_open(read_data='{"version": "1.0.0", "git_ref": "xyz"}')
+    )
     response = client.get("/version.json")
     assert response.status_code == 200
     assert response.json() == {"version": "1.0.0", "git_ref": "xyz"}
 
 
-def test_version_json_returns_404_when_missing(client: TestClient, mocker: MockerFixture) -> None:
+def test_version_json_returns_404_when_missing(
+    client: TestClient, mocker: MockerFixture
+) -> None:
     mocker.patch("builtins.open", side_effect=FileNotFoundError)
     response = client.get("/version.json")
     assert response.status_code == 404

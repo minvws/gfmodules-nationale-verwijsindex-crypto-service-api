@@ -1,11 +1,11 @@
 from typing import Any
 
 import pytest
+from gfmodules.logging import CORRELATION_ID_HEADER, bind_context
 from pytest_mock import MockerFixture
 from requests.exceptions import ConnectionError as RequestsConnectionError
 from requests.exceptions import Timeout
 
-from app.logging.context import CORRELATION_ID_HEADER, correlation_id_var
 from app.services.http import HttpService
 
 PATCH_TARGET = "app.services.http.request"
@@ -114,11 +114,8 @@ def test_do_request_propagates_transport_errors(
 def test_do_request_propagates_the_correlation_id(
     request_mock: Any, http_service: HttpService
 ) -> None:
-    token = correlation_id_var.set("some-generated-id")
-    try:
+    with bind_context({"correlation_id": "some-generated-id"}):
         http_service.do_request("GET")
-    finally:
-        correlation_id_var.reset(token)
 
     headers = request_mock.call_args.kwargs["headers"]
     assert headers[CORRELATION_ID_HEADER] == "some-generated-id"
@@ -144,10 +141,7 @@ def test_do_request_does_not_mutate_the_caller_headers(
     request_mock: Any, http_service: HttpService
 ) -> None:
     headers = {"Authorization": "Bearer x"}
-    token = correlation_id_var.set("some-generated-id")
-    try:
+    with bind_context({"correlation_id": "some-generated-id"}):
         http_service.do_request("GET", headers=headers)
-    finally:
-        correlation_id_var.reset(token)
 
     assert headers == {"Authorization": "Bearer x"}
