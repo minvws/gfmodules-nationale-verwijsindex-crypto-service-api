@@ -23,7 +23,7 @@ config_module._CONFIG = get_test_config()
 @pytest.fixture(autouse=True)
 def logging_catalogue() -> Generator[None, Any, None]:
     gflog.configure(
-        config=ConfigLogging(debug_logs_in_console=True, access_logs=False),
+        config=ConfigLogging(console_streams=["debug"], access_logs=False),
         loglevel="DEBUG",
         catalogue=Log,
     )

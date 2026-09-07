@@ -19,8 +19,8 @@ application_id = nationale-verwijsindex-crypto-service-api
 access_logs = False
 # Include exception/stack traces in JSON logs
 include_traces = True
-# Whether to display debug logs in the console
-debug_logs_in_console = True
+# Comma-separated list of streams to print to the console. Valid values: app, siem, debug
+console_streams = app, siem, debug
 # Log an error when a request arrives without an X-GF-Correlation-ID header
 correlation_id_expected = False
 

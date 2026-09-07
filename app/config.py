@@ -4,8 +4,8 @@ import os
 from enum import Enum
 from typing import Any
 
-from gfmodules.logging import ConfigLogging
-from pydantic import BaseModel, Field, ValidationError
+from gfmodules.logging import ConfigLogging as GFConfigLogging
+from pydantic import BaseModel, Field, ValidationError, field_validator
 
 logger = logging.getLogger(__name__)
 
@@ -51,6 +51,15 @@ class ConfigStats(BaseModel):
     host: str | None = None
     port: int | None = None
     module_name: str | None = None
+
+
+class ConfigLogging(GFConfigLogging):
+    @field_validator("console_streams", mode="before")
+    @classmethod
+    def _split_console_streams(cls, value: Any) -> Any:
+        if isinstance(value, str):
+            return [item.strip() for item in value.split(",") if item.strip()]
+        return value
 
 
 class ConfigUvicorn(BaseModel):
