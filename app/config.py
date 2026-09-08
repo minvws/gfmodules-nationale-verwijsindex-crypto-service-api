@@ -5,6 +5,7 @@ from enum import Enum
 from typing import Any
 
 from gfmodules.logging import ConfigLogging as GFConfigLogging
+from gfmodules.logging.ini import split_comma_separated
 from pydantic import BaseModel, Field, ValidationError, field_validator
 
 logger = logging.getLogger(__name__)
@@ -54,12 +55,9 @@ class ConfigStats(BaseModel):
 
 
 class ConfigLogging(GFConfigLogging):
-    @field_validator("console_streams", mode="before")
-    @classmethod
-    def _split_console_streams(cls, value: Any) -> Any:
-        if isinstance(value, str):
-            return [item.strip() for item in value.split(",") if item.strip()]
-        return value
+    _split_console_streams = field_validator("console_streams", mode="before")(
+        split_comma_separated()
+    )
 
 
 class ConfigUvicorn(BaseModel):
