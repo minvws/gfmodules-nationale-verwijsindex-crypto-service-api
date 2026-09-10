@@ -838,7 +838,7 @@ files = [
 
 [[package]]
 name = "gfmodules-python-logging-library"
-version = "0.3.1"
+version = "0.4.0"
 description = "Provides logging utilities for GFModules Python projects."
 optional = false
 python-versions = ">=3.11,<4.0"
@@ -856,8 +856,8 @@ fastapi = ["starlette (>=1.3,<2.0)"]
 [package.source]
 type = "git"
 url = "https://github.com/minvws/gfmodules-python-logging-library"
-reference = "v0.3.1"
-resolved_reference = "a5d337d6167c95441804c61a16032a5ef2f69556"
+reference = "v0.4.0"
+resolved_reference = "d0454d4ad08cc807e10a341a39142b7037e92c1e"
 
 [[package]]
 name = "googleapis-common-protos"
@@ -3107,4 +3107,4 @@ type = ["pytest-mypy (>=1.0.1) ; platform_python_implementation != \"PyPy\""]
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.11"
-content-hash = "2eb0a0a00c3252f5539693cd26e47682e740c80189e5c93d7515acee3cc146a9"
+content-hash = "5c27850a06403790f85e0f2fad33fc1262b96077d020c1be862fa233bc34db52"
