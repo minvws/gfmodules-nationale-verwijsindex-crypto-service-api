@@ -22,7 +22,7 @@ _SIEM = LoggingStreams.SIEM
 
 class TestCatalogue:
     def test_defines_every_required_event(self) -> None:
-        assert_catalogue_complete(Log, access_logs=False)
+        assert_catalogue_complete(Log)
 
     @pytest.mark.parametrize(
         "name,event_id",
