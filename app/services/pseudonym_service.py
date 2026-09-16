@@ -28,12 +28,22 @@ class PseudonymService:
         try:
             jwe_data = self._crypto_service.decrypt_jwe_payload(oprf_jwe)
         except CryptoError as e:
-            gflog.emit(logger, Log.PSE_EXCHANGE_FAILED, "OPRF exchange failed: JWE decrypt failed", fields={"endpoint": _ENDPOINT, "error_type": type(e).__name__})
+            gflog.emit(
+                logger,
+                Log.PSE_EXCHANGE_FAILED,
+                "OPRF exchange failed: JWE decrypt failed",
+                fields={"endpoint": _ENDPOINT, "error_type": type(e).__name__},
+            )
             raise
 
         subject = jwe_data.get("subject") if isinstance(jwe_data, dict) else None
         if not isinstance(subject, str) or not subject.startswith("pseudonym:eval:"):
-            gflog.emit(logger, Log.PSE_EXCHANGE_FAILED, "OPRF exchange failed: invalid JWE subject", fields={"endpoint": _ENDPOINT, "error_type": "invalid_subject"})
+            gflog.emit(
+                logger,
+                Log.PSE_EXCHANGE_FAILED,
+                "OPRF exchange failed: invalid JWE subject",
+                fields={"endpoint": _ENDPOINT, "error_type": "invalid_subject"},
+            )
             raise InvalidJweError(
                 "JWE is invalid: subject does not start with pseudonym:eval:"
             )
@@ -42,7 +52,12 @@ class PseudonymService:
         bf = base64.urlsafe_b64decode(blind_factor)
         result: bytes = pyoprf.unblind(bf, subj)
 
-        gflog.emit(logger, Log.PSE_EXCHANGE_OK, "OPRF exchange succeeded", fields={"endpoint": _ENDPOINT})
+        gflog.emit(
+            logger,
+            Log.PSE_EXCHANGE_OK,
+            "OPRF exchange succeeded",
+            fields={"endpoint": _ENDPOINT},
+        )
         return result
 
     def encrypt_pseudonym(

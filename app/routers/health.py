@@ -30,7 +30,16 @@ def health(
 
     if not healthy:
         unhealthy = [name for name, status in components.items() if status != "ok"]
-        gflog.emit(logger, Log.HEALTH_UNHEALTHY, "Health check unhealthy", fields={"unhealthy_component": ",".join(unhealthy), "status": "error", "error_detail": ""})
+        gflog.emit(
+            logger,
+            Log.HEALTH_UNHEALTHY,
+            "Health check unhealthy",
+            fields={
+                "unhealthy_component": ",".join(unhealthy),
+                "status": "error",
+                "error_detail": "",
+            },
+        )
 
     return JSONResponse(
         status_code=200 if healthy else 503,

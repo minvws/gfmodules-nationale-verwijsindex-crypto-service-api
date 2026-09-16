@@ -79,7 +79,9 @@ class TestEmitting:
     def test_attaches_the_event_id_and_streams(self) -> None:
         logger = logging.getLogger("app.test_events")
         with capture_records("app.test_events") as records:
-            gflog.emit(logger, Log.SYS_APP_STARTED, "started", fields={"version": "1.0"})
+            gflog.emit(
+                logger, Log.SYS_APP_STARTED, "started", fields={"version": "1.0"}
+            )
 
         record = records.entries[-1].record
         assert record.event_id == Log.SYS_APP_STARTED.event_id  # type: ignore[attr-defined]
@@ -104,7 +106,12 @@ class TestStreamRouting:
             capture_stream(_APP, "app.test_routing") as app_stream,
             capture_stream(_SIEM, "app.test_routing") as siem_stream,
         ):
-            gflog.emit(logger, Log.SYS_APP_STARTED, "started", fields={"version": "1.0", "mock_hsm": True})
+            gflog.emit(
+                logger,
+                Log.SYS_APP_STARTED,
+                "started",
+                fields={"version": "1.0", "mock_hsm": True},
+            )
 
         assert app_stream[0]["mock_hsm"] is True
         assert siem_stream == []
@@ -112,7 +119,15 @@ class TestStreamRouting:
     def test_a_stopped_event_gives_siem_the_reason_but_not_the_exception(self) -> None:
         logger = logging.getLogger("app.test_routing")
         with capture_stream(_SIEM, "app.test_routing") as siem_stream:
-            gflog.emit(logger, Log.SYS_APP_STOPPED, "stopped", fields={"shutdown_reason": "signal:SIGTERM", "last_exception_type": "RuntimeError"})
+            gflog.emit(
+                logger,
+                Log.SYS_APP_STOPPED,
+                "stopped",
+                fields={
+                    "shutdown_reason": "signal:SIGTERM",
+                    "last_exception_type": "RuntimeError",
+                },
+            )
 
         assert siem_stream[0]["shutdown_reason"] == "signal:SIGTERM"
         assert "last_exception_type" not in siem_stream[0]

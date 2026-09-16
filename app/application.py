@@ -62,7 +62,13 @@ def create_fastapi_app() -> FastAPI:
     try:
         return setup_fastapi()
     except Exception as exc:
-        gflog.emit(logger, Log.SYS_UNHANDLED_EXCEPTION, "Unhandled exception during application startup", fields={"exception_type": type(exc).__name__}, exc_info=exc)
+        gflog.emit(
+            logger,
+            Log.SYS_UNHANDLED_EXCEPTION,
+            "Unhandled exception during application startup",
+            fields={"exception_type": type(exc).__name__},
+            exc_info=exc,
+        )
         raise
 
 
