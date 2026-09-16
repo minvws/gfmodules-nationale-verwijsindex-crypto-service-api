@@ -92,8 +92,6 @@ RUN --mount=type=cache,target="${POETRY_CACHE_DIR}" \
 FROM base AS runtime
 
 ARG VIRTUAL_ENV_PATH
-ARG RELEASE_VERSION=dev
-ARG GIT_SHA=unknown
 ARG standalone=false
 
 # Copy compiled libraries
@@ -117,9 +115,13 @@ COPY --chown=${APP_USER}:${APP_GROUP} app.conf.example /src/
 COPY --chmod=755 ./docker/init-standalone.sh /usr/local/bin/
 COPY --chmod=755 ./docker/init.sh /usr/local/bin/
 
-RUN echo "{\"version\": \"${RELEASE_VERSION}\", \"git_ref\": \"${GIT_SHA}\"}" > /src/version.json && \
-    chown "${APP_USER}:${APP_GROUP}" /src/version.json && \
-    if [ "$standalone" = "true" ] ; then \
+# version.json is generated from build args so CI workspace artifacts never leak in
+ARG RELEASE_VERSION=dev
+ARG GIT_SHA=unknown
+RUN echo "{\"version\": \"${RELEASE_VERSION}\", \"git_ref\": \"${GIT_SHA}\"}" > /src/version.json \
+    && chown ${APP_USER}:${APP_GROUP} /src/version.json
+
+RUN if [ "$standalone" = "true" ] ; then \
     ln -sf /usr/local/bin/init-standalone.sh /docker-entrypoint.sh; \
   else \
     ln -sf /usr/local/bin/init.sh /docker-entrypoint.sh ; \
