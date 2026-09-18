@@ -12,8 +12,6 @@ from app.services.crypto.crypto_service import CryptoService
 
 logger = logging.getLogger(__name__)
 
-_ENDPOINT = "/decrypt_and_hash"
-
 
 class PseudonymService:
     def __init__(self, crypto_service: CryptoService):
@@ -32,7 +30,7 @@ class PseudonymService:
                 logger,
                 Log.PSE_EXCHANGE_FAILED,
                 "OPRF exchange failed: JWE decrypt failed",
-                fields={"endpoint": _ENDPOINT, "error_type": type(e).__name__},
+                fields={"error_type": type(e).__name__},
             )
             raise
 
@@ -42,7 +40,7 @@ class PseudonymService:
                 logger,
                 Log.PSE_EXCHANGE_FAILED,
                 "OPRF exchange failed: invalid JWE subject",
-                fields={"endpoint": _ENDPOINT, "error_type": "invalid_subject"},
+                fields={"error_type": "invalid_subject"},
             )
             raise InvalidJweError(
                 "JWE is invalid: subject does not start with pseudonym:eval:"
@@ -56,7 +54,6 @@ class PseudonymService:
             logger,
             Log.PSE_EXCHANGE_OK,
             "OPRF exchange succeeded",
-            fields={"endpoint": _ENDPOINT},
         )
         return result
 
