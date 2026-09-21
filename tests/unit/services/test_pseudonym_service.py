@@ -3,6 +3,7 @@ from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
+from gfmodules.logging import bind_context
 from gfmodules.logging.testing import capture_records
 from pytest_mock import MockerFixture
 
@@ -103,6 +104,14 @@ def _events(captured: Any, event_id: str) -> list[Any]:
     ]
 
 
+def _messages(captured: Any, event_id: str) -> list[dict[str, Any]]:
+    return [
+        entry.message
+        for entry in captured.entries
+        if getattr(entry.record, "event_id", None) == event_id
+    ]
+
+
 def test_decrypt_and_unblind_logs_pse_exchange_failed_on_crypto_error(
     pseudonym_service: PseudonymService,
     crypto_service_mock: MagicMock,
@@ -111,14 +120,16 @@ def test_decrypt_and_unblind_logs_pse_exchange_failed_on_crypto_error(
     crypto_service_mock.decrypt_jwe_payload.side_effect = CryptoError("nope")
 
     with (
+        bind_context({"endpoint": "/decrypt_and_hash"}),
         capture_records(pseudonym_service_module.logger.name) as captured,
         pytest.raises(CryptoError),
     ):
         pseudonym_service.decrypt_and_unblind("JWE", "AAAA")
 
     record = _events(captured, Log.PSE_EXCHANGE_FAILED.event_id)[0]
-    assert record.endpoint == "/decrypt_and_hash"
     assert record.error_type == "CryptoError"
+    message = _messages(captured, Log.PSE_EXCHANGE_FAILED.event_id)[0]
+    assert message["endpoint"] == "/decrypt_and_hash"
 
 
 def test_decrypt_and_unblind_logs_pse_exchange_failed_on_invalid_subject(
@@ -130,14 +141,16 @@ def test_decrypt_and_unblind_logs_pse_exchange_failed_on_invalid_subject(
         "subject": "wrong-prefix:abc"
     }
     with (
+        bind_context({"endpoint": "/decrypt_and_hash"}),
         capture_records(pseudonym_service_module.logger.name) as captured,
         pytest.raises(InvalidJweError),
     ):
         pseudonym_service.decrypt_and_unblind("JWE", _b64(b"\x00" * 32))
 
     record = _events(captured, Log.PSE_EXCHANGE_FAILED.event_id)[0]
-    assert record.endpoint == "/decrypt_and_hash"
     assert record.error_type == "invalid_subject"
+    message = _messages(captured, Log.PSE_EXCHANGE_FAILED.event_id)[0]
+    assert message["endpoint"] == "/decrypt_and_hash"
 
 
 def test_decrypt_and_unblind_logs_pse_exchange_ok_on_success(
@@ -150,8 +163,12 @@ def test_decrypt_and_unblind_logs_pse_exchange_ok_on_success(
     }
     mocker.patch("app.services.pseudonym_service.pyoprf.unblind", return_value=b"plain")
 
-    with capture_records(pseudonym_service_module.logger.name) as captured:
+    with (
+        bind_context({"endpoint": "/decrypt_and_hash"}),
+        capture_records(pseudonym_service_module.logger.name) as captured,
+    ):
         pseudonym_service.decrypt_and_unblind("JWE", _b64(b"blind-factor"))
 
-    record = _events(captured, Log.PSE_EXCHANGE_OK.event_id)[0]
-    assert record.endpoint == "/decrypt_and_hash"
+    assert len(_events(captured, Log.PSE_EXCHANGE_OK.event_id)) == 1
+    message = _messages(captured, Log.PSE_EXCHANGE_OK.event_id)[0]
+    assert message["endpoint"] == "/decrypt_and_hash"
