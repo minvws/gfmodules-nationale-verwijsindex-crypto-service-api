@@ -1080,14 +1080,14 @@ files = [
 
 [[package]]
 name = "jwcrypto"
-version = "1.6.0"
+version = "1.6.1"
 description = "Implementation of JOSE Web standards"
 optional = false
 python-versions = ">=3.9"
 groups = ["main"]
 files = [
-    {file = "jwcrypto-1.6.0-py3-none-any.whl", hash = "sha256:09ece277d48620079c90af7dfe84be085a229c1cbe06baa295de41e5019ac998"},
-    {file = "jwcrypto-1.6.0.tar.gz", hash = "sha256:02a82b0a3a36b2553309d78c65e1c0e3350b640fe4091f53f66f582b11f49378"},
+    {file = "jwcrypto-1.6.1-py3-none-any.whl", hash = "sha256:77e856818e514cb3d64a1043b6885a7d52f5cc37773f5e944de02103c8d3a54f"},
+    {file = "jwcrypto-1.6.1.tar.gz", hash = "sha256:a1e1570da5c2e35dbcd375ec1d2891a24de8eb35ee2c1fe8e91978efb72cfe90"},
 ]
 
 [package.dependencies]
@@ -2648,14 +2648,14 @@ zstd = ["backports-zstd (>=1.0.0) ; python_version < \"3.14\""]
 
 [[package]]
 name = "uvicorn"
-version = "0.52.4"
+version = "0.53.0"
 description = "The lightning-fast ASGI server."
 optional = false
 python-versions = ">=3.10"
 groups = ["main"]
 files = [
-    {file = "uvicorn-0.52.4-py3-none-any.whl", hash = "sha256:f86e41a149d7d05a9969337e3946a9c171c06a5d42680896daaba624aeac8da1"},
-    {file = "uvicorn-0.52.4.tar.gz", hash = "sha256:73acfee47a0b133c5de13d219492d62d8a31e935f4fe6e41a232451a15379f86"},
+    {file = "uvicorn-0.53.0-py3-none-any.whl", hash = "sha256:e8dca71ec86dce5f04e333f0d56cdedf942446e6643b9cea1af0d6d3a02cb03e"},
+    {file = "uvicorn-0.53.0.tar.gz", hash = "sha256:a9356f0cb89b3b8621529c5d5eebd69bfe154f4c3f68b4cf2de47e45fa855c2e"},
 ]
 
 [package.dependencies]
@@ -3100,4 +3100,4 @@ type = ["pytest-mypy (>=1.0.1) ; platform_python_implementation != \"PyPy\""]
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.14"
-content-hash = "35f0171d0973be33468a1334703dcd440c328b347203307af986191bb69e81b4"
+content-hash = "b6f3e78b96e2ade5f51a4bb9ce9938350c893d4bc84c95eed29bb519661e9e4d"
