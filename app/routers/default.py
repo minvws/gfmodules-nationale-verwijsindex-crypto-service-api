@@ -5,6 +5,9 @@ from pathlib import Path
 from fastapi import APIRouter, Response
 from fastapi.responses import JSONResponse
 
+from app.config import get_config
+from app.features import enabled_features
+
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
@@ -66,7 +69,10 @@ def index() -> Response:
 @router.get(
     "/version.json",
     summary="Get Version Info",
-    description="Retrieve detailed version and build information in JSON format.",
+    description=(
+        "Retrieve detailed version and build information in JSON format, extended "
+        "with the features enabled by the configuration of this environment."
+    ),
     responses={
         200: {
             "description": "Version information retrieved successfully",
@@ -75,6 +81,16 @@ def index() -> Response:
                     "example": {
                         "version": "1.0.0",
                         "git_ref": "abc123def456",
+                        "features": [
+                            {
+                                "id": "pseudonym_processing",
+                                "title": "Pseudonym processing",
+                                "description": (
+                                    "Decrypt a JWE from the NVI, unblind the "
+                                    "pseudonym and encrypt it with an IV"
+                                ),
+                            }
+                        ],
                     }
                 }
             },
@@ -89,13 +105,15 @@ def index() -> Response:
 def version_json() -> JSONResponse:
     try:
         with open(Path(__file__).parent.parent.parent / "version.json", "r") as file:
-            return JSONResponse(
-                status_code=200,
-                content=json.load(file),
-            )
-    except FileNotFoundError:
+            content = json.load(file)
+    except (FileNotFoundError, json.JSONDecodeError):
         logger.exception("Version info could not be loaded")
         return JSONResponse(
             status_code=404,
             content={"detail": "Version info could not be loaded."},
         )
+
+    content["features"] = [
+        feature.model_dump() for feature in enabled_features(get_config())
+    ]
+    return JSONResponse(status_code=200, content=content)
