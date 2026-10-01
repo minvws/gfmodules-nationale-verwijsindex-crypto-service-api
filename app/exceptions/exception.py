@@ -11,3 +11,8 @@ class KeyNotFoundError(CryptoError):
 class InvalidJweError(CryptoError):
     status_code = 400
     error_message = "Invalid JWE"
+
+
+class InvalidRequestError(CryptoError):
+    status_code = 400
+    error_message = "Invalid request"
