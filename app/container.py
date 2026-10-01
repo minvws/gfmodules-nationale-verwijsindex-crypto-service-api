@@ -34,12 +34,14 @@ def container_config(binder: inject.Binder) -> None:
             module=config.hsm_api.module,
             slot=config.hsm_api.slot,
             hash_key_id=config.app.hashing_key_id,
+            jwe_key_ids=config.app.jwe_key_ids,
         )
 
     binder.bind(CryptoService, crypto_service)
 
     pseudonym_service = PseudonymService(
         crypto_service=crypto_service,
+        reserved_labels={config.app.hashing_key_id, *config.app.jwe_key_ids},
     )
     binder.bind(PseudonymService, pseudonym_service)
 

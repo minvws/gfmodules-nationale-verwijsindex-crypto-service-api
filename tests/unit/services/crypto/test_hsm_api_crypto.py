@@ -34,6 +34,7 @@ def service(http_mock: MagicMock) -> HsmApiCryptoService:
         module="m",
         slot="s",
         hash_key_id="hk",
+        jwe_key_ids=["sk"],
     )
 
 
@@ -192,7 +193,9 @@ def test_decrypt_jwe_rejects_malformed_compact_serialization(
 def test_decrypt_jwe_validates_header_fields(
     alg: str, enc: str, err: type[Exception], http_mock: MagicMock
 ) -> None:
-    svc = HsmApiCryptoService(http_mock, module="m", slot="s", hash_key_id="h")
+    svc = HsmApiCryptoService(
+        http_mock, module="m", slot="s", hash_key_id="h", jwe_key_ids=["sk"]
+    )
     cek = os.urandom(32)
     token, _ = _make_jwe(cek, b"plain", alg=alg, enc=enc)
     with pytest.raises(err):
@@ -200,7 +203,9 @@ def test_decrypt_jwe_validates_header_fields(
 
 
 def test_decrypt_jwe_supports_sha1(http_mock: MagicMock) -> None:
-    svc = HsmApiCryptoService(http_mock, module="m", slot="s", hash_key_id="h")
+    svc = HsmApiCryptoService(
+        http_mock, module="m", slot="s", hash_key_id="h", jwe_key_ids=["sk"]
+    )
     cek = os.urandom(32)
     token, _ = _make_jwe(cek, b"plain", alg="RSA-OAEP")
     http_mock.do_request.return_value = _resp(
@@ -260,3 +265,26 @@ def test_hash_raises_on_malformed_response(
     http_mock.do_request.return_value = _resp(200, {"wrong": "shape"})
     with pytest.raises(CryptoError):
         service.hash(b"input")
+
+
+def test_decrypt_jwe_rejects_kid_not_in_allowlist(
+    service: HsmApiCryptoService, http_mock: MagicMock
+) -> None:
+    token, _ = _make_jwe(os.urandom(32), b"plaintext")
+
+    with pytest.raises(InvalidJweError):
+        service.decrypt_jwe(token, "some-other-private-key")
+
+    http_mock.do_request.assert_not_called()
+
+
+def test_decrypt_jwe_payload_rejects_unknown_kid_before_calling_hsm(
+    service: HsmApiCryptoService, http_mock: MagicMock
+) -> None:
+    key = jwk.JWK.generate(kty="RSA", size=2048)
+    token = _create_real_jwe_compact(b'{"subject": "x"}', key.public(), kid="hk")
+
+    with pytest.raises(InvalidJweError):
+        service.decrypt_jwe_payload(token)
+
+    http_mock.do_request.assert_not_called()
