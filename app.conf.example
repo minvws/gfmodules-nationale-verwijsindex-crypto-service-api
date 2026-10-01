@@ -7,6 +7,8 @@ hashing_key_id=abcdef1234567890
 jwe_key_ids=nvi-jwe-key
 # Whether to suppress urllib3 InsecureRequestWarning
 allow_insecure_requests = False
+# Mount the /test endpoints used by tools/test_flow.py. Never enable outside development.
+test_endpoints_enabled = True
 
 [logging]
 # All keys are optional. When syslog_path is omitted, logs only go to stdout.
