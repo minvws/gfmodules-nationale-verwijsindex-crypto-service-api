@@ -65,7 +65,7 @@ class TestEmitting:
         [
             (Log.SYS_APP_STARTED, logging.INFO),
             (Log.HEALTH_UNHEALTHY, logging.ERROR),
-            (Log.PSE_EXCHANGE_OK, logging.DEBUG),
+            (Log.PSE_EXCHANGE_OK, logging.INFO),
             (Log.SYS_UNHANDLED_EXCEPTION, logging.ERROR),
         ],
     )

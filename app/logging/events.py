@@ -34,4 +34,4 @@ class Log(_Base):
     HEALTH_UNHEALTHY = LogEvent("100600", logging.ERROR, (_APP, _SIEM))
 
     PSE_EXCHANGE_FAILED = LogEvent("900700", logging.ERROR, (_APP, _SIEM))
-    PSE_EXCHANGE_OK = LogEvent("900701", logging.DEBUG, (_APP,))
+    PSE_EXCHANGE_OK = LogEvent("900701", logging.INFO, (_APP,))
