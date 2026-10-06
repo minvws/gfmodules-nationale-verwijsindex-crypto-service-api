@@ -114,13 +114,30 @@ def test_get_public_key_returns_pem(
     assert service.get_public_key("sk") == "PEM"
 
 
-def test_get_public_key_fetches_per_key_id(
-    service: HsmApiCryptoService, http_mock: MagicMock
-) -> None:
+def test_get_public_key_fetches_per_key_id(http_mock: MagicMock) -> None:
+    service = HsmApiCryptoService(
+        http_mock,
+        module="m",
+        slot="s",
+        hash_key_id="hk",
+        allowed_jwe_key_ids=["sk", "other"],
+    )
     http_mock.do_request.return_value = _resp(200, {"objects": [{"publickey": "PEM"}]})
     service.get_public_key("sk")
     service.get_public_key("other")
     assert http_mock.do_request.call_count == 2
+    labels = [c.kwargs["data"]["label"] for c in http_mock.do_request.call_args_list]
+    assert labels == ["sk", "other"]
+
+
+@pytest.mark.parametrize("key_id", ["hk", "some-aes-label"])
+def test_get_public_key_refuses_keys_that_are_not_allowed(
+    service: HsmApiCryptoService, http_mock: MagicMock, key_id: str
+) -> None:
+    with pytest.raises(KeyNotFoundError):
+        service.get_public_key(key_id)
+
+    http_mock.do_request.assert_not_called()
 
 
 def test_get_public_key_raises_when_not_found(

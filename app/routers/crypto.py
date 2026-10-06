@@ -5,7 +5,6 @@ from fastapi import APIRouter, Body, Depends
 from fastapi.responses import JSONResponse
 
 from app import container
-from app.config import get_config
 from app.data import Pkc11Mechanism
 from app.exceptions.exception import CryptoError
 from app.models.pseudonym import PseudonymRequest
@@ -24,11 +23,6 @@ def public_key(
     key_id: str,
     crypto_service: Annotated[CryptoService, Depends(container.get_crypto_service)],
 ) -> JSONResponse:
-    # Only the configured JWE keys may be fetched, so the endpoint cannot be used to
-    # probe which other labels exist in the HSM slot.
-    if key_id not in get_config().app.allowed_jwe_key_ids:
-        return JSONResponse(content={"error": "Key not found"}, status_code=404)
-
     try:
         pem = crypto_service.get_public_key(key_id)
     except CryptoError as e:

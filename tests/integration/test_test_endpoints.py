@@ -7,6 +7,7 @@ from fastapi.testclient import TestClient
 
 from app import application
 from app.config import Config
+from app.exceptions.exception import KeyNotFoundError
 from app.services.crypto.crypto_service import CryptoService
 from app.services.pseudonym_service import PseudonymService
 
@@ -53,7 +54,11 @@ def test_public_key_returned_for_configured_jwe_key(
 def test_public_key_refused_for_other_labels(
     enabled_client: TestClient, crypto_stub: MagicMock, key_id: str
 ) -> None:
+    # The crypto service decides which keys are allowed; the endpoint maps its refusal to 404
+    crypto_stub.get_public_key.side_effect = KeyNotFoundError()
+
     response = enabled_client.get(f"/test/public_key/{key_id}")
 
     assert response.status_code == 404
-    crypto_stub.get_public_key.assert_not_called()
+    assert response.json() == {"error": "Key not found"}
+    crypto_stub.get_public_key.assert_called_once_with(key_id)

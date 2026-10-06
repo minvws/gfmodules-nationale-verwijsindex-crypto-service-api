@@ -49,7 +49,14 @@ class HsmApiCryptoService(CryptoService):
         return True
 
     def get_public_key(self, key_id: str) -> str:
-        """Retrieve the public key for an existing key pair identified by key_id."""
+        """Retrieve the public key for an existing key pair identified by key_id.
+
+        Only the allowed JWE keys are served, so this cannot be used to probe which
+        other labels exist in the HSM slot.
+        """
+        if key_id not in self.allowed_jwe_key_ids:
+            raise KeyNotFoundError(f"Key {key_id!r} is not an allowed JWE key")
+
         r = self._http.do_request(
             "POST",
             sub_route=f"hsm/{self.module}/{self.slot}",
