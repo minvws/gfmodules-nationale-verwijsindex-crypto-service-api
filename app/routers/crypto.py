@@ -26,7 +26,7 @@ def public_key(
 ) -> JSONResponse:
     # Only the configured JWE keys may be fetched, so the endpoint cannot be used to
     # probe which other labels exist in the HSM slot.
-    if key_id not in get_config().app.jwe_key_ids:
+    if key_id not in get_config().app.allowed_jwe_key_ids:
         return JSONResponse(content={"error": "Key not found"}, status_code=404)
 
     try:

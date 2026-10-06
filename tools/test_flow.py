@@ -2,7 +2,7 @@
 
 Blinds a pseudonym with OPRF, wraps it in a JWE, and sends it to the endpoint.
 Requires test_endpoints_enabled = True in the [app] section of the service config,
-and --key-id must be one of the configured jwe_key_ids.
+and --key-id must be one of the configured allowed_jwe_key_ids.
 """
 import argparse
 import base64
