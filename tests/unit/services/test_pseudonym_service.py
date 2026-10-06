@@ -172,3 +172,66 @@ def test_decrypt_and_unblind_logs_pse_exchange_ok_on_success(
     assert len(_events(captured, Log.PSE_EXCHANGE_OK.event_id)) == 1
     message = _messages(captured, Log.PSE_EXCHANGE_OK.event_id)[0]
     assert message["endpoint"] == "/decrypt_and_hash"
+
+
+@pytest.fixture
+def guarded_pseudonym_service(crypto_service_mock: MagicMock) -> PseudonymService:
+    return PseudonymService(
+        crypto_service=crypto_service_mock,
+        reserved_labels={"hashing-key", "jwe-key"},
+    )
+
+
+@pytest.mark.parametrize("label", ["hashing-key", "jwe-key", ""])
+def test_encrypt_pseudonym_rejects_reserved_labels(
+    guarded_pseudonym_service: PseudonymService,
+    crypto_service_mock: MagicMock,
+    label: str,
+) -> None:
+    from app.data import Pkc11Mechanism
+    from app.exceptions.exception import InvalidRequestError
+
+    with pytest.raises(InvalidRequestError):
+        guarded_pseudonym_service.encrypt_pseudonym(
+            b"pseudonym", b"h" * 32, label=label, mechanism=Pkc11Mechanism.AES_CBC
+        )
+
+    crypto_service_mock.encrypt_aes.assert_not_called()
+
+
+@pytest.mark.parametrize("mechanism", ["SHA256_HMAC", "RSA_PKCS_OAEP"])
+def test_encrypt_pseudonym_rejects_non_aes_mechanisms(
+    guarded_pseudonym_service: PseudonymService,
+    crypto_service_mock: MagicMock,
+    mechanism: str,
+) -> None:
+    from app.data import Pkc11Mechanism
+    from app.exceptions.exception import InvalidRequestError
+
+    # Convert outside the raises-block, so only encrypt_pseudonym can raise in it
+    non_aes_mechanism = Pkc11Mechanism(mechanism)
+
+    with pytest.raises(InvalidRequestError):
+        guarded_pseudonym_service.encrypt_pseudonym(
+            b"pseudonym",
+            b"h" * 32,
+            label="aes-key",
+            mechanism=non_aes_mechanism,
+        )
+
+    crypto_service_mock.encrypt_aes.assert_not_called()
+
+
+def test_encrypt_pseudonym_accepts_unreserved_aes_label(
+    guarded_pseudonym_service: PseudonymService,
+    crypto_service_mock: MagicMock,
+) -> None:
+    from app.data import Pkc11Mechanism
+
+    crypto_service_mock.encrypt_aes.return_value = "ENC"
+
+    result = guarded_pseudonym_service.encrypt_pseudonym(
+        b"pseudonym", b"h" * 32, label="aes-key", mechanism=Pkc11Mechanism.AES_CBC
+    )
+
+    assert result.encrypted_pseudonym == "ENC"

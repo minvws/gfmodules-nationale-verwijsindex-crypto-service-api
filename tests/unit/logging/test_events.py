@@ -56,7 +56,12 @@ class TestTheOverriddenSlots:
             DefaultEventCatalogue.SYS_APP_STARTED.fields[_APP]
         )
 
-        assert added == {"mock_hsm", "telemetry_enabled", "stats_enabled"}
+        assert added == {
+            "mock_hsm",
+            "telemetry_enabled",
+            "stats_enabled",
+            "test_endpoints_enabled",
+        }
 
 
 class TestEmitting:
