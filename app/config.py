@@ -30,6 +30,8 @@ class ConfigApp(BaseModel):
     # Anything else is rejected, so a caller cannot make the HSM use an arbitrary private key.
     allowed_jwe_key_ids: list[str] = Field(min_length=1)
     allow_insecure_requests: bool = Field(default=False)
+    # Mounts the /test endpoints used by tools/test_flow.py. Never enable outside development.
+    test_endpoints_enabled: bool = Field(default=False)
 
     @field_validator("allowed_jwe_key_ids", mode="before")
     @classmethod

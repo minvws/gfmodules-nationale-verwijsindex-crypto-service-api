@@ -20,6 +20,7 @@ from gfmodules.logging.middleware import (
 from app.config import get_config
 from app.logging.events import Log
 from app.routers.crypto import router as crypto_router
+from app.routers.crypto import test_router as crypto_test_router
 from app.routers.default import router as default_router
 from app.routers.health import router as health_router
 from app.stats import StatsdMiddleware
@@ -106,6 +107,7 @@ async def _lifespan(_: FastAPI) -> AsyncIterator[None]:
             "mock_hsm": config.hsm_api.mock,
             "telemetry_enabled": config.telemetry.enabled,
             "stats_enabled": config.stats.enabled,
+            "test_endpoints_enabled": config.app.test_endpoints_enabled,
         },
     ):
         yield
@@ -131,6 +133,8 @@ def setup_fastapi() -> FastAPI:
     )
 
     routers = [default_router, health_router, crypto_router]
+    if config.app.test_endpoints_enabled:
+        routers.append(crypto_test_router)
     for router in routers:
         fastapi.include_router(router)
 

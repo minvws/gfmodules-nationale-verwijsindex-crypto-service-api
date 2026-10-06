@@ -1,6 +1,8 @@
 """Debug and test script for /decrypt_and_hash endpoint.
 
 Blinds a pseudonym with OPRF, wraps it in a JWE, and sends it to the endpoint.
+Requires test_endpoints_enabled = True in the [app] section of the service config,
+and --key-id must be one of the configured jwe_key_ids.
 """
 import argparse
 import base64
