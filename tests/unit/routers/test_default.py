@@ -5,6 +5,8 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from pytest_mock import MockerFixture
 
+from app.config import get_config
+from app.features import enabled_features
 from app.routers.default import router as default_router
 
 
@@ -49,7 +51,12 @@ def test_version_json_returns_payload(
     )
     response = client.get("/version.json")
     assert response.status_code == 200
-    assert response.json() == {"version": "1.0.0", "git_ref": "xyz"}
+    features = [feature.model_dump() for feature in enabled_features(get_config())]
+    assert response.json() == {
+        "version": "1.0.0",
+        "git_ref": "xyz",
+        "features": features,
+    }
 
 
 def test_version_json_returns_404_when_missing(
@@ -59,3 +66,11 @@ def test_version_json_returns_404_when_missing(
     response = client.get("/version.json")
     assert response.status_code == 404
     assert response.json() == {"detail": "Version info could not be loaded."}
+
+
+def test_version_json_returns_404_when_invalid(
+    client: TestClient, mocker: MockerFixture
+) -> None:
+    mocker.patch("builtins.open", mock_open(read_data="not json"))
+    response = client.get("/version.json")
+    assert response.status_code == 404
