@@ -208,12 +208,15 @@ def test_encrypt_pseudonym_rejects_non_aes_mechanisms(
     from app.data import Pkc11Mechanism
     from app.exceptions.exception import InvalidRequestError
 
+    # Convert outside the raises-block, so only encrypt_pseudonym can raise in it
+    non_aes_mechanism = Pkc11Mechanism(mechanism)
+
     with pytest.raises(InvalidRequestError):
         guarded_pseudonym_service.encrypt_pseudonym(
             b"pseudonym",
             b"h" * 32,
             label="aes-key",
-            mechanism=Pkc11Mechanism(mechanism),
+            mechanism=non_aes_mechanism,
         )
 
     crypto_service_mock.encrypt_aes.assert_not_called()
