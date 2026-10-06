@@ -34,7 +34,7 @@ def service(http_mock: MagicMock) -> HsmApiCryptoService:
         module="m",
         slot="s",
         hash_key_id="hk",
-        jwe_key_ids=["sk"],
+        allowed_jwe_key_ids=["sk"],
     )
 
 
@@ -194,7 +194,7 @@ def test_decrypt_jwe_validates_header_fields(
     alg: str, enc: str, err: type[Exception], http_mock: MagicMock
 ) -> None:
     svc = HsmApiCryptoService(
-        http_mock, module="m", slot="s", hash_key_id="h", jwe_key_ids=["sk"]
+        http_mock, module="m", slot="s", hash_key_id="h", allowed_jwe_key_ids=["sk"]
     )
     cek = os.urandom(32)
     token, _ = _make_jwe(cek, b"plain", alg=alg, enc=enc)
@@ -204,7 +204,7 @@ def test_decrypt_jwe_validates_header_fields(
 
 def test_decrypt_jwe_supports_sha1(http_mock: MagicMock) -> None:
     svc = HsmApiCryptoService(
-        http_mock, module="m", slot="s", hash_key_id="h", jwe_key_ids=["sk"]
+        http_mock, module="m", slot="s", hash_key_id="h", allowed_jwe_key_ids=["sk"]
     )
     cek = os.urandom(32)
     token, _ = _make_jwe(cek, b"plain", alg="RSA-OAEP")

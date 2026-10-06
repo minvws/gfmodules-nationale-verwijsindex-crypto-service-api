@@ -28,12 +28,12 @@ class ConfigApp(BaseModel):
     hashing_key_id: str
     # HSM labels of the private keys an incoming JWE may be encrypted for (the JWE "kid").
     # Anything else is rejected, so a caller cannot make the HSM use an arbitrary private key.
-    jwe_key_ids: list[str] = Field(min_length=1)
+    allowed_jwe_key_ids: list[str] = Field(min_length=1)
     allow_insecure_requests: bool = Field(default=False)
 
-    @field_validator("jwe_key_ids", mode="before")
+    @field_validator("allowed_jwe_key_ids", mode="before")
     @classmethod
-    def split_jwe_key_ids(cls, v: Any) -> Any:
+    def split_allowed_jwe_key_ids(cls, v: Any) -> Any:
         if isinstance(v, str):
             return [item for item in v.replace(",", " ").split() if item]
         return v

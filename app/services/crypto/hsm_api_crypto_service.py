@@ -23,14 +23,14 @@ class HsmApiCryptoService(CryptoService):
         module: str,
         slot: str,
         hash_key_id: str,
-        jwe_key_ids: Collection[str],
+        allowed_jwe_key_ids: Collection[str],
     ):
         logger.debug("Initializing HSM API service: module=%s, slot=%s", module, slot)
         self._http = http
         self.module = module
         self.slot = slot
         self.hash_key_id = hash_key_id
-        self.jwe_key_ids = frozenset(jwe_key_ids)
+        self.allowed_jwe_key_ids = frozenset(allowed_jwe_key_ids)
 
     def health_check(self) -> bool:
         try:
@@ -67,7 +67,7 @@ class HsmApiCryptoService(CryptoService):
 
     def decrypt_jwe(self, jwe_token: str, key_id: str) -> bytes:
         """Decrypt RSA-OAEP(+A256GCM) JWE: unwrap CEK in HSM, decrypt locally."""
-        if key_id not in self.jwe_key_ids:
+        if key_id not in self.allowed_jwe_key_ids:
             raise InvalidJweError("JWE kid is not an accepted key id")
 
         logger.debug("Decrypting JWE with key %s using HSM API", key_id)
