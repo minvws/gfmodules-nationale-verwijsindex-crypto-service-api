@@ -85,6 +85,9 @@ class TestLifespan:
         assert started[0].mock_hsm is use_config.hsm_api.mock
         assert started[0].telemetry_enabled is use_config.telemetry.enabled
         assert started[0].stats_enabled is use_config.stats.enabled
+        assert (
+            started[0].test_endpoints_enabled is use_config.app.test_endpoints_enabled
+        )
 
     def test_the_added_switches_reach_the_app_stream(
         self, use_config: Config, mocker: MockerFixture

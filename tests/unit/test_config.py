@@ -13,6 +13,7 @@ def get_test_config() -> Config:
     return Config(
         app=ConfigApp(
             hashing_key_id="hashing-key",
+            allowed_jwe_key_ids=["sk"],
         ),
         uvicorn=ConfigUvicorn(),
         telemetry=ConfigTelemetry(),

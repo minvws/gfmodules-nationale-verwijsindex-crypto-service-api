@@ -34,6 +34,7 @@ def service(http_mock: MagicMock) -> HsmApiCryptoService:
         module="m",
         slot="s",
         hash_key_id="hk",
+        allowed_jwe_key_ids=["sk"],
     )
 
 
@@ -113,13 +114,30 @@ def test_get_public_key_returns_pem(
     assert service.get_public_key("sk") == "PEM"
 
 
-def test_get_public_key_fetches_per_key_id(
-    service: HsmApiCryptoService, http_mock: MagicMock
-) -> None:
+def test_get_public_key_fetches_per_key_id(http_mock: MagicMock) -> None:
+    service = HsmApiCryptoService(
+        http_mock,
+        module="m",
+        slot="s",
+        hash_key_id="hk",
+        allowed_jwe_key_ids=["sk", "other"],
+    )
     http_mock.do_request.return_value = _resp(200, {"objects": [{"publickey": "PEM"}]})
     service.get_public_key("sk")
     service.get_public_key("other")
     assert http_mock.do_request.call_count == 2
+    labels = [c.kwargs["data"]["label"] for c in http_mock.do_request.call_args_list]
+    assert labels == ["sk", "other"]
+
+
+@pytest.mark.parametrize("key_id", ["hk", "some-aes-label"])
+def test_get_public_key_refuses_keys_that_are_not_allowed(
+    service: HsmApiCryptoService, http_mock: MagicMock, key_id: str
+) -> None:
+    with pytest.raises(KeyNotFoundError):
+        service.get_public_key(key_id)
+
+    http_mock.do_request.assert_not_called()
 
 
 def test_get_public_key_raises_when_not_found(
@@ -192,7 +210,9 @@ def test_decrypt_jwe_rejects_malformed_compact_serialization(
 def test_decrypt_jwe_validates_header_fields(
     alg: str, enc: str, err: type[Exception], http_mock: MagicMock
 ) -> None:
-    svc = HsmApiCryptoService(http_mock, module="m", slot="s", hash_key_id="h")
+    svc = HsmApiCryptoService(
+        http_mock, module="m", slot="s", hash_key_id="h", allowed_jwe_key_ids=["sk"]
+    )
     cek = os.urandom(32)
     token, _ = _make_jwe(cek, b"plain", alg=alg, enc=enc)
     with pytest.raises(err):
@@ -200,7 +220,9 @@ def test_decrypt_jwe_validates_header_fields(
 
 
 def test_decrypt_jwe_supports_sha1(http_mock: MagicMock) -> None:
-    svc = HsmApiCryptoService(http_mock, module="m", slot="s", hash_key_id="h")
+    svc = HsmApiCryptoService(
+        http_mock, module="m", slot="s", hash_key_id="h", allowed_jwe_key_ids=["sk"]
+    )
     cek = os.urandom(32)
     token, _ = _make_jwe(cek, b"plain", alg="RSA-OAEP")
     http_mock.do_request.return_value = _resp(
@@ -260,3 +282,26 @@ def test_hash_raises_on_malformed_response(
     http_mock.do_request.return_value = _resp(200, {"wrong": "shape"})
     with pytest.raises(CryptoError):
         service.hash(b"input")
+
+
+def test_decrypt_jwe_rejects_kid_not_in_allowlist(
+    service: HsmApiCryptoService, http_mock: MagicMock
+) -> None:
+    token, _ = _make_jwe(os.urandom(32), b"plaintext")
+
+    with pytest.raises(InvalidJweError):
+        service.decrypt_jwe(token, "some-other-private-key")
+
+    http_mock.do_request.assert_not_called()
+
+
+def test_decrypt_jwe_payload_rejects_unknown_kid_before_calling_hsm(
+    service: HsmApiCryptoService, http_mock: MagicMock
+) -> None:
+    key = jwk.JWK.generate(kty="RSA", size=2048)
+    token = _create_real_jwe_compact(b'{"subject": "x"}', key.public(), kid="hk")
+
+    with pytest.raises(InvalidJweError):
+        service.decrypt_jwe_payload(token)
+
+    http_mock.do_request.assert_not_called()

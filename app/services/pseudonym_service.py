@@ -1,11 +1,12 @@
 import base64
 import logging
+from collections.abc import Collection
 
 import gfmodules.logging as gflog
 import pyoprf
 
 from app.data import Pkc11Mechanism
-from app.exceptions.exception import CryptoError, InvalidJweError
+from app.exceptions.exception import CryptoError, InvalidJweError, InvalidRequestError
 from app.logging.events import Log
 from app.models.pseudonym import PseudonymResponse
 from app.services.crypto.crypto_service import CryptoService
@@ -14,8 +15,15 @@ logger = logging.getLogger(__name__)
 
 
 class PseudonymService:
-    def __init__(self, crypto_service: CryptoService):
+    def __init__(
+        self,
+        crypto_service: CryptoService,
+        reserved_labels: Collection[str] = (),
+    ):
         self._crypto_service = crypto_service
+        # Labels of keys that must never be used to encrypt a pseudonym (the HMAC key and
+        # the JWE private keys). AES labels themselves rotate via the NVI key administration.
+        self._reserved_labels = frozenset(reserved_labels)
 
     def decrypt_and_unblind(self, oprf_jwe: str, blind_factor: str) -> bytes:
         """
@@ -64,6 +72,11 @@ class PseudonymService:
         label: str,
         mechanism: Pkc11Mechanism,
     ) -> PseudonymResponse:
+        if mechanism != Pkc11Mechanism.AES_CBC:
+            raise InvalidRequestError("Only AES_CBC may be used to encrypt a pseudonym")
+        if not label or label in self._reserved_labels:
+            raise InvalidRequestError("Label may not be used to encrypt a pseudonym")
+
         iv = hmac_hash[:16]
         logger.debug("encrypting pseudonym")
         encrypted_data = self._crypto_service.encrypt_aes(

@@ -18,6 +18,7 @@ class Log(_Base):
                 "mock_hsm",
                 "telemetry_enabled",
                 "stats_enabled",
+                "test_endpoints_enabled",
             ),
         },
     )

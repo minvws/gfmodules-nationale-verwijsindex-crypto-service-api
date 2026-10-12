@@ -1,6 +1,7 @@
 import base64
 import json
 import logging
+from collections.abc import Collection
 
 from Crypto.Cipher import AES
 from requests import JSONDecodeError
@@ -22,12 +23,14 @@ class HsmApiCryptoService(CryptoService):
         module: str,
         slot: str,
         hash_key_id: str,
+        allowed_jwe_key_ids: Collection[str],
     ):
         logger.debug("Initializing HSM API service: module=%s, slot=%s", module, slot)
         self._http = http
         self.module = module
         self.slot = slot
         self.hash_key_id = hash_key_id
+        self.allowed_jwe_key_ids = frozenset(allowed_jwe_key_ids)
 
     def health_check(self) -> bool:
         try:
@@ -46,7 +49,14 @@ class HsmApiCryptoService(CryptoService):
         return True
 
     def get_public_key(self, key_id: str) -> str:
-        """Retrieve the public key for an existing key pair identified by key_id."""
+        """Retrieve the public key for an existing key pair identified by key_id.
+
+        Only the allowed JWE keys are served, so this cannot be used to probe which
+        other labels exist in the HSM slot.
+        """
+        if key_id not in self.allowed_jwe_key_ids:
+            raise KeyNotFoundError(f"Key {key_id!r} is not an allowed JWE key")
+
         r = self._http.do_request(
             "POST",
             sub_route=f"hsm/{self.module}/{self.slot}",
@@ -64,6 +74,9 @@ class HsmApiCryptoService(CryptoService):
 
     def decrypt_jwe(self, jwe_token: str, key_id: str) -> bytes:
         """Decrypt RSA-OAEP(+A256GCM) JWE: unwrap CEK in HSM, decrypt locally."""
+        if key_id not in self.allowed_jwe_key_ids:
+            raise InvalidJweError("JWE kid is not an accepted key id")
+
         logger.debug("Decrypting JWE with key %s using HSM API", key_id)
         parts = jwe_token.split(".")
         if len(parts) != 5:

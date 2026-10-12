@@ -14,8 +14,11 @@ from app.services.pseudonym_service import PseudonymService
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
+# Development-only endpoints, mounted when app.test_endpoints_enabled is set
+test_router = APIRouter(prefix="/test", tags=["Test"])
 
-@router.get("/test/public_key/{key_id}", summary="Return the NVI public key as PEM")
+
+@test_router.get("/public_key/{key_id}", summary="Return the NVI public key as PEM")
 def public_key(
     key_id: str,
     crypto_service: Annotated[CryptoService, Depends(container.get_crypto_service)],

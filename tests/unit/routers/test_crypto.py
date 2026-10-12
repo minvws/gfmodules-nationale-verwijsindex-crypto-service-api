@@ -84,3 +84,44 @@ def test_process_maps_crypto_errors(
 def test_process_requires_query_params(client: TestClient) -> None:
     response = client.post("/process")
     assert response.status_code == 422
+
+
+@pytest.mark.parametrize("mechanism", ["SHA256_HMAC", "RSA_PKCS_OAEP", "DES"])
+def test_process_rejects_non_aes_mechanism(
+    client: TestClient, pseudonym_mock: MagicMock, mechanism: str
+) -> None:
+    response = client.post(
+        "/process",
+        json={
+            "jwe": "JWE",
+            "blind_factor": "BF",
+            "label": "label-1",
+            "mechanism": mechanism,
+        },
+    )
+
+    assert response.status_code == 422
+    pseudonym_mock.decrypt_and_unblind.assert_not_called()
+
+
+def test_process_rejects_reserved_label(
+    client: TestClient, pseudonym_mock: MagicMock
+) -> None:
+    from app.exceptions.exception import InvalidRequestError
+
+    pseudonym_mock.decrypt_and_unblind.return_value = b"unblinded"
+    pseudonym_mock.hash.return_value = b"h" * 32
+    pseudonym_mock.encrypt_pseudonym.side_effect = InvalidRequestError()
+
+    response = client.post(
+        "/process",
+        json={
+            "jwe": "JWE",
+            "blind_factor": "BF",
+            "label": "hashing-key",
+            "mechanism": "AES_CBC",
+        },
+    )
+
+    assert response.status_code == 400
+    assert response.json() == {"error": "Invalid request"}
