@@ -26,6 +26,7 @@ def logging_catalogue() -> Generator[None, Any, None]:
         config=ConfigLogging(console_streams=["debug"], access_logs=True),
         loglevel="DEBUG",
         catalogue=Log,
+        strict_fields=True,
     )
     try:
         yield
