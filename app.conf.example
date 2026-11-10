@@ -11,22 +11,28 @@ allow_insecure_requests = False
 test_endpoints_enabled = True
 
 [logging]
-# All keys are optional. When syslog_path is omitted, logs only go to stdout.
-# Single syslog channel in host:port format (UDP). All streams (app, siem,
-# public_inspect, debug) are sent here; each JSON record carries a stream_id
-# field so the log server can tell them apart.
-syslog_path = syslog:5514
-# Identifies this application in the JSON records (application_id field),
-# so the log server can tell apart applications sharing the channel.
-application_id = nationale-verwijsindex-crypto-service-api
+# All keys are optional.
+# Log server in host:port format (UDP). Leave empty to log to stdout only.
+syslog_path=syslog:5514
+# Streams sent to the log server, comma separated, from app, siem,
+# public_inspect and debug. Each JSON record carries its stream_id.
+syslog_streams=app,siem,public_inspect
+# Stamped on every JSON record as application_id, so the log server can tell
+# applications sharing the channel apart.
+application_id=nationale-verwijsindex-crypto-service-api
+# Streams printed to stdout as readable text, comma separated, from app, siem
+# and debug. The debug stream already holds every record.
+console_streams=debug
+# Include tracebacks on the console and on the debug stream.
+include_traces=True
 # Emit an access record per request.
-access_logs = True
-# Include exception/stack traces in JSON logs
-include_traces = True
-# Comma-separated list of streams to print to the console. Valid values: app, siem, debug
-console_streams = app, siem, debug
-# Log an error when a request arrives without an X-GF-Correlation-ID header
-correlation_id_expected = False
+access_logs=True
+# Log an error when a request arrives without an X-GF-Correlation-ID header.
+correlation_id_expected=False
+# Read the client ip from X-Forwarded-For instead of the connection. The header
+# is set by the caller, so only enable this where a proxy in front of this
+# application rewrites it.
+trust_forwarded_for=False
 
 [hsm_api]
 # If true, use a pass-through mock instead of calling the HSM API
