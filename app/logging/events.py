@@ -31,8 +31,23 @@ class Log(_Base):
         "100606"
     )  # NVI-SYS-006
 
-    SYS_CRYPTO_FAILED = LogEvent("100607", logging.ERROR, (_APP, _SIEM))
-    HEALTH_UNHEALTHY = LogEvent("100600", logging.ERROR, (_APP, _SIEM))
+    SYS_CRYPTO_FAILED = LogEvent(
+        "100607",
+        logging.ERROR,
+        (_APP, _SIEM),
+        {_APP: ("error_type",), _SIEM: ("error_type",)},
+    )
+    HEALTH_UNHEALTHY = LogEvent(  # NVI-HEALTH-001
+        "100600",
+        logging.ERROR,
+        (_APP, _SIEM),
+        {_APP: ("component", "status", "error_detail"), _SIEM: ("component", "status")},
+    )
 
-    PSE_EXCHANGE_FAILED = LogEvent("900700", logging.ERROR, (_APP, _SIEM))
-    PSE_EXCHANGE_OK = LogEvent("900701", logging.INFO, (_APP,))
+    PSE_EXCHANGE_FAILED = LogEvent(
+        "900700",
+        logging.ERROR,
+        (_APP, _SIEM),
+        {_APP: ("error_type",), _SIEM: ("error_type",)},
+    )
+    PSE_EXCHANGE_OK = LogEvent("900701", logging.INFO, (_APP,), {_APP: ()})

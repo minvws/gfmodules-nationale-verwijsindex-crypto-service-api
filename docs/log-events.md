@@ -31,10 +31,10 @@ Every event carries these on every stream, whenever the request context holds a 
 | `SYS_APP_CRASHED` | 100602 | CRITICAL | `shutdown_reason`, `last_exception_type` |
 | `SYS_UNHANDLED_EXCEPTION` | 100604 | ERROR | `exception_type`, `endpoint`, `method` |
 | `SYS_MISSING_CORRELATION_ID` | 100606 | ERROR | `endpoint`, `method` |
-| `SYS_CRYPTO_FAILED` | 100607 | ERROR | *any* |
-| `HEALTH_UNHEALTHY` | 100600 | ERROR | *any* |
-| `PSE_EXCHANGE_FAILED` | 900700 | ERROR | *any* |
-| `PSE_EXCHANGE_OK` | 900701 | INFO | *any* |
+| `SYS_CRYPTO_FAILED` | 100607 | ERROR | `error_type` |
+| `HEALTH_UNHEALTHY` | 100600 | ERROR | `component`, `status`, `error_detail` |
+| `PSE_EXCHANGE_FAILED` | 900700 | ERROR | `error_type` |
+| `PSE_EXCHANGE_OK` | 900701 | INFO | *none* |
 | `ACCESS_REQUEST` | 100 | INFO | `endpoint`, `method`, `status_code`, `status_code_missing`, `duration_ms`, `body`, `body_truncated` |
 
 ## Stream `siem`
@@ -44,6 +44,6 @@ Every event carries these on every stream, whenever the request context holds a 
 | `SYS_APP_STOPPED` | 100602 | INFO | `shutdown_reason` |
 | `SYS_APP_CRASHED` | 100602 | CRITICAL | `shutdown_reason` |
 | `SYS_UNHANDLED_EXCEPTION` | 100604 | ERROR | `exception_type`, `endpoint`, `method` |
-| `SYS_CRYPTO_FAILED` | 100607 | ERROR | *any* |
-| `HEALTH_UNHEALTHY` | 100600 | ERROR | *any* |
-| `PSE_EXCHANGE_FAILED` | 900700 | ERROR | *any* |
+| `SYS_CRYPTO_FAILED` | 100607 | ERROR | `error_type` |
+| `HEALTH_UNHEALTHY` | 100600 | ERROR | `component`, `status` |
+| `PSE_EXCHANGE_FAILED` | 900700 | ERROR | `error_type` |
