@@ -78,7 +78,6 @@ def application_init() -> None:
     if get_config().app.allow_insecure_requests:
         urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
     gflog.install_excepthook(logger)
-    gflog.install_signal_handlers()
 
 
 def setup_logging() -> None:
@@ -143,11 +142,7 @@ def setup_fastapi() -> FastAPI:
             StatsdMiddleware, module_name=config.stats.module_name or "default"
         )
 
-    fastapi.add_middleware(
-        RequestContextMiddleware,
-        correlation_id_expected=config.logging.correlation_id_expected,
-        trust_forwarded_for=config.logging.trust_forwarded_for,
-    )
+    fastapi.add_middleware(RequestContextMiddleware)
 
     fastapi.add_exception_handler(Exception, _unhandled_exception_handler)
 
