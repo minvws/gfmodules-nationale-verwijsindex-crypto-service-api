@@ -30,7 +30,7 @@ Every event carries these on every stream, whenever the request context holds a 
 | `SYS_APP_STOPPED` | 100602 | INFO | `shutdown_reason`, `last_exception_type` |
 | `SYS_APP_CRASHED` | 100602 | CRITICAL | `shutdown_reason`, `last_exception_type` |
 | `SYS_UNHANDLED_EXCEPTION` | 100604 | ERROR | `exception_type`, `endpoint`, `method` |
-| `SYS_MISSING_CORRELATION_ID` | 100606 | ERROR | `endpoint`, `method` |
+| `SYS_MISSING_CORRELATION_ID` | 100628 | ERROR | `endpoint`, `method` |
 | `SYS_CRYPTO_FAILED` | 100607 | ERROR | `error_type` |
 | `HEALTH_UNHEALTHY` | 100600 | ERROR | `component`, `status`, `error_detail` |
 | `PSE_EXCHANGE_FAILED` | 900700 | ERROR | `error_type` |

@@ -36,7 +36,7 @@ class TestCatalogue:
             ("SYS_APP_STOPPED", "100602"),
             ("SYS_APP_CRASHED", "100602"),
             ("SYS_UNHANDLED_EXCEPTION", "100604"),
-            ("SYS_MISSING_CORRELATION_ID", "100606"),
+            ("SYS_MISSING_CORRELATION_ID", "100628"),
             ("SYS_CRYPTO_FAILED", "100607"),
             ("PSE_EXCHANGE_FAILED", "900700"),
             ("PSE_EXCHANGE_OK", "900701"),
