@@ -60,7 +60,7 @@ def test_health_logs_health_unhealthy_when_crypto_unhealthy(
     ]
     assert len(unhealthy) == 1
     record = unhealthy[0]
-    assert record.unhealthy_component == "hsm_api"
+    assert record.component == "hsm_api"
     assert record.status == "error"
 
 
