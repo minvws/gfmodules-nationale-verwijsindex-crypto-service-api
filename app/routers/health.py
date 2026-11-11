@@ -5,9 +5,10 @@ import gfmodules.logging as gflog
 from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
 
-from app.container import get_crypto_service
+from app.container import get_crypto_service, get_pseudonym_jwks_service
 from app.logging.events import Log
 from app.services.crypto.crypto_service import CryptoService
+from app.services.pseudonym_jwks import PseudonymJwksService
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -20,12 +21,15 @@ def ok_or_error(value: bool) -> str:
 @router.get("/health")
 def health(
     crypto_service: Annotated[CryptoService, Depends(get_crypto_service)],
+    jwks: Annotated[PseudonymJwksService | None, Depends(get_pseudonym_jwks_service)],
 ) -> JSONResponse:
     logger.debug("Checking application health")
 
     components = {
         "hsm_api": ok_or_error(crypto_service.health_check()),
     }
+    if jwks is not None:
+        components["jwks"] = ok_or_error(jwks.health_check())
     healthy = all(status == "ok" for status in components.values())
 
     if not healthy:

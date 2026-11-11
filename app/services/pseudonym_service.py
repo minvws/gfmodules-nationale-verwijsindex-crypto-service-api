@@ -1,4 +1,5 @@
 import base64
+import json
 import logging
 from collections.abc import Collection
 
@@ -6,10 +7,16 @@ import gfmodules.logging as gflog
 import pyoprf
 
 from app.data import Pkc11Mechanism
-from app.exceptions.exception import CryptoError, InvalidJweError, InvalidRequestError
+from app.exceptions.exception import (
+    CryptoError,
+    InvalidJweError,
+    InvalidRequestError,
+    InvalidSignedPseudonymError,
+)
 from app.logging.events import Log
 from app.models.pseudonym import PseudonymResponse
 from app.services.crypto.crypto_service import CryptoService
+from app.services.pseudonym_jwt import PseudonymJwtVerifier
 
 logger = logging.getLogger(__name__)
 
@@ -18,9 +25,11 @@ class PseudonymService:
     def __init__(
         self,
         crypto_service: CryptoService,
+        verifier: PseudonymJwtVerifier | None,
         reserved_labels: Collection[str] = (),
     ):
         self._crypto_service = crypto_service
+        self._verifier = verifier
         # Labels of keys that must never be used to encrypt a pseudonym (the HMAC key and
         # the JWE private keys). AES labels themselves rotate via the NVI key administration.
         self._reserved_labels = frozenset(reserved_labels)
@@ -32,7 +41,27 @@ class PseudonymService:
         logger.debug("Decrypting OPRF JWE")
 
         try:
-            jwe_data = self._crypto_service.decrypt_jwe_payload(oprf_jwe)
+            expected_types = (
+                {"JWT"} if self._verifier is not None else {"application/json"}
+            )
+            payload = self._crypto_service.decrypt_jwe_payload(
+                oprf_jwe, expected_content_types=expected_types
+            )
+            if self._verifier is not None:
+                try:
+                    token = payload.decode("ascii")
+                except UnicodeDecodeError:
+                    raise InvalidSignedPseudonymError(
+                        "Signed pseudonym is not ASCII encoded"
+                    ) from None
+                jwe_data = self._verifier.verify(token)
+            else:
+                try:
+                    jwe_data = json.loads(payload.decode("utf-8"))
+                except (ValueError, UnicodeDecodeError):
+                    raise InvalidJweError(
+                        "Decrypted pseudonym is not valid UTF-8 JSON"
+                    ) from None
         except CryptoError as e:
             gflog.emit(
                 logger,
@@ -54,9 +83,21 @@ class PseudonymService:
                 "JWE is invalid: subject does not start with pseudonym:eval:"
             )
 
-        subj = base64.urlsafe_b64decode(subject.split(":")[-1])
-        bf = base64.urlsafe_b64decode(blind_factor)
-        result: bytes = pyoprf.unblind(bf, subj)
+        try:
+            encoded_subject = subject.removeprefix("pseudonym:eval:")
+            subj = base64.b64decode(encoded_subject, altchars=b"-_", validate=True)
+            bf = base64.b64decode(blind_factor, altchars=b"-_", validate=True)
+            if not subj:
+                raise ValueError("Empty OPRF subject")
+            result: bytes = pyoprf.unblind(bf, subj)
+        except (ValueError, UnicodeError):
+            gflog.emit(
+                logger,
+                Log.PSE_EXCHANGE_FAILED,
+                "OPRF exchange failed: invalid OPRF data",
+                fields={"error_type": "invalid_oprf_data"},
+            )
+            raise InvalidJweError("OPRF subject or blind factor is invalid") from None
 
         gflog.emit(
             logger,

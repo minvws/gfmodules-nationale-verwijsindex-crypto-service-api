@@ -13,6 +13,15 @@ class InvalidJweError(CryptoError):
     error_message = "Invalid JWE"
 
 
+class InvalidSignedPseudonymError(InvalidJweError):
+    pass
+
+
+class JwksUnavailableError(CryptoError):
+    status_code = 503
+    error_message = "Pseudonym verification unavailable"
+
+
 class InvalidRequestError(CryptoError):
     status_code = 400
     error_message = "Invalid request"

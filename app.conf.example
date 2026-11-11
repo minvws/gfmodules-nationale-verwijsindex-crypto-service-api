@@ -7,8 +7,21 @@ hashing_key_id=abcdef1234567890
 allowed_jwe_key_ids=nvi-jwe-key
 # Whether to suppress urllib3 InsecureRequestWarning
 allow_insecure_requests = False
-# Mount the /test endpoints used by tools/test_flow.py. Never enable outside development.
+# Mount development-only /test endpoints. Never enable outside development.
 test_endpoints_enabled = True
+
+[pseudonym]
+# Require a signed pseudonym by default. Set to False only for unsigned legacy JSON.
+signing_expected = True
+# Replace these example values with the trusted PRS settings.
+jwks_url = https://prs.example/.well-known/jwks
+expected_issuer = https://prs.example
+expected_audience = oin:00000099000000001000
+# Optional: CA bundle for this JWKS endpoint (requires HTTPS; default: standard CA validation).
+# verify_ca = secrets/prs-ca.crt
+# Optional: client certificate and private key for this JWKS endpoint (requires HTTPS).
+# cert_path = secrets/prs-client.crt
+# key_path = secrets/prs-client.key
 
 [logging]
 # All keys are optional. When syslog_path is omitted, logs only go to stdout.

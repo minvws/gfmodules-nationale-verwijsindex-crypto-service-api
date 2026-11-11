@@ -36,7 +36,7 @@ class HttpService:
             cert = (
                 (self._mtls_cert, self._mtls_key)
                 if self._mtls_cert and self._mtls_key
-                else None
+                else self._mtls_cert
             )
 
             if data is not None and form_data is not None:
@@ -60,6 +60,7 @@ class HttpService:
                 timeout=self._timeout,
                 cert=cert,
                 verify=self._verify_ca,
+                allow_redirects=False,
                 **data_args,  # type: ignore
             )
 

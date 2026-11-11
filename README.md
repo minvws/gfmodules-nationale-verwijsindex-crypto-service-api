@@ -66,21 +66,40 @@ After this you can simply run `docker compose up`.
 
 The application will be available at `http://localhost:8577` when the startup is completed.
 
-## Test flow
+## Pseudonym configuration
 
-`tools/test_flow.py` drives the full `/decrypt_and_hash` flow end-to-end: it
-fetches the service's public key, blinds a sample pseudonym with `pyoprf`,
-wraps it in a JWE, and calls the endpoint.
+The crypto service expects a signed pseudonym inside the JWE by default. Configure
+the trusted PRS and the expected recipient in `app.conf`:
 
-### Run
+```ini
+[pseudonym]
+signing_expected = True
 
-```bash
-poetry install
-poetry run python tools/test_flow.py                       # defaults
-poetry run python tools/test_flow.py --url http://localhost:8577 --pseudonym "bsn-123"
+# Replace these values with your PRS settings.
+jwks_url = https://prs.example/.well-known/jwks
+expected_issuer = https://prs.example
+expected_audience = oin:00000099000000001000
+# Optional TLS configuration for this JWKS endpoint:
+# verify_ca = secrets/prs-ca.crt
+# cert_path = secrets/prs-client.crt
+# key_path = secrets/prs-client.key
 ```
 
-On success the script prints `status=200` and a `hashed_pseudonym` body.
+`expected_issuer` and `expected_audience` must match the PRS-issued JWT. Enable
+`jwt_signing.enabled = True` in the PRS and use its complete JWKS URL over HTTPS.
+
+TLS uses the standard CA trust store by default. Use `verify_ca` for a custom CA
+bundle and `cert_path`/`key_path` for mutual TLS. A combined certificate/private-key
+PEM needs only `cert_path`.
+
+JWKS keys are cached per worker for 300 seconds (5 minutes), then refreshed on the
+next verification or health check. Publish new keys at least 5 minutes before
+using them.
+
+For legacy unsigned JSON, set `signing_expected = False`; JWKS settings are then
+optional and unused. **This disables signature verification.** The JWE must have
+`cty = JWT` in signed mode or `cty = application/json` in unsigned mode.
+`hsm_api.mock = True` mocks only HSM operations, not signature verification.
 
 ## Docker container builds
 

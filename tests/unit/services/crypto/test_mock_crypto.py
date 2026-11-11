@@ -22,12 +22,11 @@ def test_decrypt_jwe_round_trips_input(mock_crypto_service: MockCryptoService) -
     assert mock_crypto_service.decrypt_jwe("token", "kid") == b"token"
 
 
-def test_decrypt_jwe_payload_returns_canned_subject(
+def test_decrypt_jwe_payload_returns_input_as_plaintext(
     mock_crypto_service: MockCryptoService,
 ) -> None:
-    payload = mock_crypto_service.decrypt_jwe_payload("token")
-    assert isinstance(payload, dict)
-    assert payload["subject"].startswith("pseudonym:eval:")
+    payload = mock_crypto_service.decrypt_jwe_payload("token", {"JWT"})
+    assert payload == b"token"
 
 
 def test_hash_is_identity(mock_crypto_service: MockCryptoService) -> None:

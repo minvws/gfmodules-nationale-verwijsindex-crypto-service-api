@@ -34,6 +34,14 @@ def test_do_request_omits_sub_route_when_empty(
     assert request_mock.call_args.kwargs["url"] == mock_url
 
 
+def test_do_request_does_not_follow_redirects(
+    request_mock: Any, http_service: HttpService
+) -> None:
+    http_service.do_request("GET")
+
+    assert request_mock.call_args.kwargs["allow_redirects"] is False
+
+
 @pytest.mark.parametrize(
     "kwargs,expected_key,expected_value",
     [
@@ -68,10 +76,10 @@ def test_do_request_rejects_data_and_form_data_together(
     [
         ("a.crt", "a.key", ("a.crt", "a.key")),
         (None, None, None),
-        ("a.crt", None, None),
+        ("combined.pem", None, "combined.pem"),
         (None, "a.key", None),
     ],
-    ids=["mtls-on", "mtls-off", "missing-key", "missing-cert"],
+    ids=["mtls-on", "mtls-off", "combined-pem", "missing-cert"],
 )
 def test_do_request_mtls_cert_arg(
     request_mock: Any,
