@@ -35,9 +35,9 @@ def health(
             Log.HEALTH_UNHEALTHY,
             "Health check unhealthy",
             fields={
-                "unhealthy_component": ",".join(unhealthy),
+                "component": ",".join(unhealthy),
                 "status": "error",
-                "error_detail": "",
+                "error_detail": f"unhealthy components: {', '.join(unhealthy)}",
             },
         )
 

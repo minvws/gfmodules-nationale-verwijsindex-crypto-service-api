@@ -4,10 +4,12 @@ from unittest.mock import MagicMock
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
+from gfmodules.logging.testing import capture_records
 
 from app import container
 from app.config import Config
 from app.exceptions.exception import CryptoError, InvalidJweError, KeyNotFoundError
+from app.logging.events import Log
 from app.models.pseudonym import PseudonymResponse
 from app.routers.crypto import router as crypto_router
 
@@ -54,31 +56,41 @@ def test_process_returns_encrypted_pseudonym_with_iv(
 
 
 @pytest.mark.parametrize(
-    "exc,status",
+    "exc,status,crypto_failures",
     [
-        (CryptoError(), 500),
-        (KeyNotFoundError(), 404),
-        (InvalidJweError(), 400),
+        (CryptoError(), 500, ["CryptoError"]),
+        (KeyNotFoundError(), 404, []),
+        (InvalidJweError(), 400, []),
     ],
     ids=["crypto", "key-not-found", "invalid-jwe"],
 )
-def test_process_maps_crypto_errors(
-    client: TestClient, pseudonym_mock: MagicMock, exc: CryptoError, status: int
+def test_process_maps_crypto_errors_and_logs_server_side_failures(
+    client: TestClient,
+    pseudonym_mock: MagicMock,
+    exc: CryptoError,
+    status: int,
+    crypto_failures: list[str],
 ) -> None:
     pseudonym_mock.decrypt_and_unblind.side_effect = exc
 
-    response = client.post(
-        "/process",
-        json={
-            "jwe": "X",
-            "blind_factor": "Y",
-            "label": "label-1",
-            "mechanism": "AES_CBC",
-        },
-    )
+    with capture_records("app.routers.crypto") as captured:
+        response = client.post(
+            "/process",
+            json={
+                "jwe": "X",
+                "blind_factor": "Y",
+                "label": "label-1",
+                "mechanism": "AES_CBC",
+            },
+        )
 
     assert response.status_code == status
     assert response.json() == {"error": exc.error_message}
+    assert [
+        entry.record.error_type  # type: ignore[attr-defined]
+        for entry in captured.entries
+        if getattr(entry.record, "event_id", None) == Log.SYS_CRYPTO_FAILED.event_id
+    ] == crypto_failures
 
 
 def test_process_requires_query_params(client: TestClient) -> None:
