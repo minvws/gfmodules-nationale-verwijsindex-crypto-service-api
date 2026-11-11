@@ -111,9 +111,12 @@ class HsmApiCryptoService(CryptoService):
         tag = base64.urlsafe_b64decode(tag_b64 + "==")
         aad = header_b64.encode("ascii")
 
-        cipher = AES.new(cek, AES.MODE_GCM, nonce=iv)
-        cipher.update(aad)
-        return cipher.decrypt_and_verify(ciphertext, tag)
+        try:
+            cipher = AES.new(cek, AES.MODE_GCM, nonce=iv)
+            cipher.update(aad)
+            return cipher.decrypt_and_verify(ciphertext, tag)
+        except ValueError:
+            raise InvalidJweError("Could not decrypt JWE") from None
 
     def hash(self, data: bytes) -> bytes:
         logger.debug("Hashing %s bytes using HSM API", len(data))

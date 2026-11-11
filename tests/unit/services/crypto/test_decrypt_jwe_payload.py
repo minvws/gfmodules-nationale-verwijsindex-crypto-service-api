@@ -1,5 +1,6 @@
 import base64
 import json
+from collections.abc import Collection
 from typing import Any
 
 import pytest
@@ -20,8 +21,12 @@ class _MockCryptoService(MockCryptoService):
         assert self._plaintext is not None
         return self._plaintext
 
-    def decrypt_jwe_payload(self, jwe_token: str) -> Any:
-        return CryptoService.decrypt_jwe_payload(self, jwe_token)
+    def decrypt_jwe_payload(
+        self, jwe_token: str, expected_content_types: Collection[str]
+    ) -> bytes:
+        return CryptoService.decrypt_jwe_payload(
+            self, jwe_token, expected_content_types=expected_content_types
+        )
 
 
 class LocalCryptoService(CryptoService):
@@ -54,51 +59,79 @@ class LocalCryptoService(CryptoService):
 
 
 def _make_test_jwe(
-    payload: bytes, kid: str | None = "k1", key: jwk.JWK | None = None
+    payload: bytes,
+    kid: str | None = "k1",
+    key: jwk.JWK | None = None,
+    cty: Any = "application/json",
 ) -> str:
     key = key or jwk.JWK.generate(kty="RSA", size=2048)
     header: dict[str, str] = {"alg": "RSA-OAEP-256", "enc": "A256GCM"}
     if kid is not None:
         header["kid"] = kid
+    if cty is not ...:
+        header["cty"] = cty
     token = jwe.JWE(payload, json.dumps(header))
     token.add_recipient(key)
     return token.serialize(compact=True)
 
 
-def test_decrypt_jwe_payload_returns_parsed_json() -> None:
+def test_decrypt_jwe_payload_returns_plaintext_bytes() -> None:
     plaintext = json.dumps({"subject": "pseudonym:eval:abc"}).encode()
     svc = _MockCryptoService(plaintext=plaintext)
 
-    out = svc.decrypt_jwe_payload(_make_test_jwe(plaintext))
+    out = svc.decrypt_jwe_payload(_make_test_jwe(plaintext), {"application/json"})
 
-    assert out == {"subject": "pseudonym:eval:abc"}
+    assert out == plaintext
 
 
 def test_decrypt_jwe_payload_raises_on_missing_kid() -> None:
     svc = _MockCryptoService(plaintext=b'{"subject": "x"}')
     token = _make_test_jwe(b'{"subject": "x"}', kid=None)
     with pytest.raises(InvalidJweError):
-        svc.decrypt_jwe_payload(token)
+        svc.decrypt_jwe_payload(token, expected_content_types={"application/json"})
+
+
+def test_decrypt_jwe_payload_rejects_non_object_jose_header() -> None:
+    key = jwk.JWK.generate(kty="RSA", size=2048)
+    token = jwe.JWE(
+        b"payload", json.dumps({"alg": "RSA-OAEP-256", "enc": "A256GCM", "kid": "k1"})
+    )
+    token.add_recipient(key)
+    token.add_recipient(key)
+    svc = _MockCryptoService(plaintext=b"payload")
+
+    with pytest.raises(InvalidJweError):
+        svc.decrypt_jwe_payload(token.serialize(compact=False), {"application/json"})
 
 
 def test_decrypt_jwe_payload_wraps_invalid_compact_serialization() -> None:
     svc = _MockCryptoService(plaintext=b"")
     with pytest.raises(InvalidJweError):
-        svc.decrypt_jwe_payload("not-a-jwe")
+        svc.decrypt_jwe_payload(
+            "not-a-jwe", expected_content_types={"application/json"}
+        )
+
+
+def test_decrypt_jwe_payload_rejects_empty_protected_header() -> None:
+    svc = _MockCryptoService(plaintext=b"")
+    with pytest.raises(InvalidJweError):
+        svc.decrypt_jwe_payload(
+            "e30.AA.AA.AA.AA", expected_content_types={"application/json"}
+        )
 
 
 def test_decrypt_jwe_payload_propagates_crypto_error() -> None:
     svc = _MockCryptoService(plaintext=CryptoError("bad"))
     token = _make_test_jwe(b'{"x":1}')
     with pytest.raises(CryptoError):
-        svc.decrypt_jwe_payload(token)
+        svc.decrypt_jwe_payload(token, expected_content_types={"application/json"})
 
 
 def test_decrypt_jwe_payload_wraps_unexpected_errors() -> None:
     svc = _MockCryptoService(plaintext=RuntimeError("boom"))
     token = _make_test_jwe(b'{"x":1}')
     with pytest.raises(CryptoError):
-        svc.decrypt_jwe_payload(token)
+        svc.decrypt_jwe_payload(token, expected_content_types={"application/json"})
 
 
 def test_decrypt_jwe_payload_with_real_decryption_round_trip() -> None:
@@ -108,6 +141,31 @@ def test_decrypt_jwe_payload_with_real_decryption_round_trip() -> None:
     token = _make_test_jwe(plaintext, kid=kid, key=key.public())
     svc = LocalCryptoService(keys={kid: key})
 
-    out = svc.decrypt_jwe_payload(token)
+    out = svc.decrypt_jwe_payload(token, {"application/json"})
 
-    assert out == {"subject": "pseudonym:eval:real"}
+    assert out == plaintext
+
+
+def test_signed_mode_requires_jwt_content_type() -> None:
+    svc = _MockCryptoService(plaintext=b"header.payload.signature")
+    token = _make_test_jwe(b"payload", cty="JWT")
+    assert (
+        svc.decrypt_jwe_payload(token, expected_content_types={"JWT"})
+        == b"header.payload.signature"
+    )
+
+
+@pytest.mark.parametrize("cty", [..., "application/json", None])
+def test_signed_mode_rejects_other_or_missing_content_type(cty: Any) -> None:
+    svc = _MockCryptoService(plaintext=b"payload")
+    token = _make_test_jwe(b"payload", cty=cty)
+    with pytest.raises(InvalidJweError):
+        svc.decrypt_jwe_payload(token, expected_content_types={"JWT"})
+
+
+@pytest.mark.parametrize("cty", [..., "JWT", None])
+def test_json_mode_rejects_other_or_invalid_content_type(cty: Any) -> None:
+    svc = _MockCryptoService(plaintext=b"{}")
+    token = _make_test_jwe(b"{}", cty=cty)
+    with pytest.raises(InvalidJweError):
+        svc.decrypt_jwe_payload(token, expected_content_types={"application/json"})

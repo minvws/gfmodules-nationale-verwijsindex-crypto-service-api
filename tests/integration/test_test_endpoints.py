@@ -15,7 +15,10 @@ from app.services.pseudonym_service import PseudonymService
 def _client(crypto_stub: MagicMock) -> Iterator[TestClient]:
     def _bind(binder: inject.Binder) -> None:
         binder.bind(CryptoService, crypto_stub)
-        binder.bind(PseudonymService, PseudonymService(crypto_stub))
+        binder.bind(
+            PseudonymService,
+            PseudonymService(crypto_stub, verifier=None),
+        )
 
     inject.clear_and_configure(_bind)
     yield TestClient(application.setup_fastapi())

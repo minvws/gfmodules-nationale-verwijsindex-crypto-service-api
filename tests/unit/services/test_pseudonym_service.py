@@ -1,4 +1,5 @@
 import base64
+import json
 from typing import Any
 from unittest.mock import MagicMock
 
@@ -15,7 +16,7 @@ from app.services.pseudonym_service import PseudonymService
 
 @pytest.fixture
 def pseudonym_service(crypto_service_mock: MagicMock) -> PseudonymService:
-    return PseudonymService(crypto_service=crypto_service_mock)
+    return PseudonymService(crypto_service=crypto_service_mock, verifier=None)
 
 
 def _b64(data: bytes) -> str:
@@ -29,9 +30,9 @@ def test_decrypt_and_unblind_returns_unblinded_bytes(
 ) -> None:
     subject_bytes = b"subject-bytes"
     blind_factor = b"blind-factor"
-    crypto_service_mock.decrypt_jwe_payload.return_value = {
-        "subject": f"pseudonym:eval:{_b64(subject_bytes)}"
-    }
+    crypto_service_mock.decrypt_jwe_payload.return_value = json.dumps(
+        {"subject": f"pseudonym:eval:{_b64(subject_bytes)}"}
+    ).encode()
     unblind = mocker.patch(
         "app.services.pseudonym_service.pyoprf.unblind", return_value=b"plain"
     )
@@ -78,7 +79,7 @@ def test_decrypt_and_unblind_rejects_invalid_subject(
     pseudonym_service: PseudonymService,
     crypto_service_mock: MagicMock,
 ) -> None:
-    crypto_service_mock.decrypt_jwe_payload.return_value = payload
+    crypto_service_mock.decrypt_jwe_payload.return_value = json.dumps(payload).encode()
     encrypted_jwe = "JWE"
     blind_factor = _b64(b"blind-factor")
     with pytest.raises(InvalidJweError):
@@ -137,9 +138,9 @@ def test_decrypt_and_unblind_logs_pse_exchange_failed_on_invalid_subject(
     crypto_service_mock: MagicMock,
     mocker: MockerFixture,
 ) -> None:
-    crypto_service_mock.decrypt_jwe_payload.return_value = {
-        "subject": "wrong-prefix:abc"
-    }
+    crypto_service_mock.decrypt_jwe_payload.return_value = json.dumps(
+        {"subject": "wrong-prefix:abc"}
+    ).encode()
     with (
         bind_context({"endpoint": "/decrypt_and_hash"}),
         capture_records(pseudonym_service_module.logger.name) as captured,
@@ -158,9 +159,9 @@ def test_decrypt_and_unblind_logs_pse_exchange_ok_on_success(
     crypto_service_mock: MagicMock,
     mocker: MockerFixture,
 ) -> None:
-    crypto_service_mock.decrypt_jwe_payload.return_value = {
-        "subject": f"pseudonym:eval:{_b64(b'subject-bytes')}"
-    }
+    crypto_service_mock.decrypt_jwe_payload.return_value = json.dumps(
+        {"subject": f"pseudonym:eval:{_b64(b'subject-bytes')}"}
+    ).encode()
     mocker.patch("app.services.pseudonym_service.pyoprf.unblind", return_value=b"plain")
 
     with (
@@ -178,6 +179,7 @@ def test_decrypt_and_unblind_logs_pse_exchange_ok_on_success(
 def guarded_pseudonym_service(crypto_service_mock: MagicMock) -> PseudonymService:
     return PseudonymService(
         crypto_service=crypto_service_mock,
+        verifier=None,
         reserved_labels={"hashing-key", "jwe-key"},
     )
 

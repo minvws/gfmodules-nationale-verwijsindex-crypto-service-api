@@ -1,7 +1,6 @@
-import json
 import logging
 from abc import ABC, abstractmethod
-from typing import Any
+from collections.abc import Collection
 
 from jwcrypto import jwe
 
@@ -60,23 +59,31 @@ class CryptoService(ABC):
         to be already encoded.
         """
 
-    def decrypt_jwe_payload(self, jwe_token: str) -> Any:
+    def decrypt_jwe_payload(
+        self, jwe_token: str, expected_content_types: Collection[str]
+    ) -> bytes:
         """
-        Decrypt a JWE and return the parsed JSON payload.
-        Extracts the key ID (kid) from the JWE header and uses it to decrypt.
+        Validate the JWE header and return its decrypted plaintext bytes.
+        The content type must be a string in the allowed set.
         """
         try:
-            # Extract kid from JWE header
             token = jwe.JWE()
             token.deserialize(jwe_token)
-            kid = token.jose_header.get("kid")
-            if not kid:
-                raise InvalidJweError("Invalid JWE: missing kid in header")
+            header = token.jose_header
+            if not isinstance(header, dict):
+                raise InvalidJweError("JWE header is not an object")
+            kid = header.get("kid")
+            if not isinstance(kid, str) or not kid:
+                raise InvalidJweError("JWE header is missing a valid key ID")
+            content_type = header.get("cty")
+            if (
+                not isinstance(content_type, str)
+                or content_type not in expected_content_types
+            ):
+                raise InvalidJweError("JWE does not have the expected content type")
 
-            # Decrypt and parse
-            payload = self.decrypt_jwe(jwe_token, kid)
-            return json.loads(payload.decode("utf-8"))
-        except (jwe.InvalidJWEData, InvalidJweError) as e:
+            return self.decrypt_jwe(jwe_token, kid)
+        except (jwe.InvalidJWEData, jwe.InvalidJWEOperation, InvalidJweError) as e:
             logger.exception("JWE decrypt failed: invalid JWE")
             raise InvalidJweError("Invalid JWE format") from e
         except CryptoError:

@@ -1,4 +1,5 @@
 import base64
+import json
 from unittest.mock import MagicMock
 
 from fastapi.testclient import TestClient
@@ -14,9 +15,9 @@ def test_process_full_flow(
 ) -> None:
     subject = b"subject-bytes"
     hmac_value = b"hash-out-with-a-long-text"
-    crypto_stub.decrypt_jwe_payload.return_value = {
-        "subject": f"pseudonym:eval:{_b64u(subject)}"
-    }
+    crypto_stub.decrypt_jwe_payload.return_value = json.dumps(
+        {"subject": f"pseudonym:eval:{_b64u(subject)}"}
+    ).encode()
     crypto_stub.hash.return_value = hmac_value
     mocker.patch(
         "app.services.pseudonym_service.pyoprf.unblind", return_value=b"unblinded"
@@ -40,14 +41,16 @@ def test_process_full_flow(
         "encrypted_pseudonym": "some-encrypted_data",
         "iv": _b64u(hmac_value[:16]),
     }
-    crypto_stub.decrypt_jwe_payload.assert_called_once_with("JWE-TOKEN")
+    crypto_stub.decrypt_jwe_payload.assert_called_once_with(
+        "JWE-TOKEN", expected_content_types={"application/json"}
+    )
     crypto_stub.hash.assert_called_once_with(b"unblinded")
 
 
 def test_process_returns_400_when_subject_invalid(
     client: TestClient, crypto_stub: MagicMock
 ) -> None:
-    crypto_stub.decrypt_jwe_payload.return_value = {"subject": "wrong"}
+    crypto_stub.decrypt_jwe_payload.return_value = b'{"subject":"wrong"}'
 
     response = client.post(
         "/process",

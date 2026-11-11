@@ -45,7 +45,7 @@ def _b64u_nopad(data: bytes) -> str:
 def _make_jwe(
     cek: bytes, plaintext: bytes, alg: str = "RSA-OAEP", enc: str = "A256GCM"
 ) -> tuple[str, bytes]:
-    header = {"alg": alg, "enc": enc, "kid": "sk"}
+    header = {"alg": alg, "enc": enc, "kid": "sk", "cty": "application/json"}
     header_b64 = _b64u_nopad(json.dumps(header).encode())
     iv = os.urandom(12)
     cipher = AES.new(cek, AES.MODE_GCM, nonce=iv)
@@ -65,7 +65,12 @@ def _make_jwe(
 
 
 def _create_real_jwe_compact(plaintext: bytes, key: jwk.JWK, kid: str = "sk") -> str:
-    header = {"alg": "RSA-OAEP", "enc": "A256GCM", "kid": kid}
+    header = {
+        "alg": "RSA-OAEP",
+        "enc": "A256GCM",
+        "kid": kid,
+        "cty": "application/json",
+    }
     token = jwe.JWE(plaintext, json.dumps(header))
     token.add_recipient(key)
     return token.serialize(compact=True)
@@ -295,6 +300,29 @@ def test_decrypt_jwe_rejects_kid_not_in_allowlist(
     http_mock.do_request.assert_not_called()
 
 
+def test_decrypt_jwe_payload_rejects_tampered_authentication_tag(
+    service: HsmApiCryptoService, http_mock: MagicMock
+) -> None:
+    cek = os.urandom(32)
+    token, _ = _make_jwe(cek, b"plaintext")
+    parts = token.split(".")
+    tag = bytearray(base64.urlsafe_b64decode(parts[-1] + "=="))
+    tag[0] ^= 1
+    parts[-1] = _b64u_nopad(bytes(tag))
+    http_mock.do_request.return_value = _resp(
+        200, {"result": base64.b64encode(cek).decode()}
+    )
+    tampered_token = ".".join(parts)
+
+    with pytest.raises(InvalidJweError):
+        service.decrypt_jwe(tampered_token, "sk")
+
+    with pytest.raises(InvalidJweError):
+        service.decrypt_jwe_payload(
+            tampered_token, expected_content_types={"application/json"}
+        )
+
+
 def test_decrypt_jwe_payload_rejects_unknown_kid_before_calling_hsm(
     service: HsmApiCryptoService, http_mock: MagicMock
 ) -> None:
@@ -302,6 +330,6 @@ def test_decrypt_jwe_payload_rejects_unknown_kid_before_calling_hsm(
     token = _create_real_jwe_compact(b'{"subject": "x"}', key.public(), kid="hk")
 
     with pytest.raises(InvalidJweError):
-        service.decrypt_jwe_payload(token)
+        service.decrypt_jwe_payload(token, expected_content_types={"application/json"})
 
     http_mock.do_request.assert_not_called()

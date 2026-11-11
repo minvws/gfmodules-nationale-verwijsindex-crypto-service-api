@@ -20,10 +20,14 @@ def crypto_stub() -> MagicMock:
 @pytest.fixture
 def app(use_config: Config, crypto_stub: MagicMock) -> Iterator[FastAPI]:
     """A real FastAPI app with the production routers, talking to stubbed services."""
+    use_config.pseudonym.signing_expected = False
 
     def _bind(binder: inject.Binder) -> None:
         binder.bind(CryptoService, crypto_stub)
-        binder.bind(PseudonymService, PseudonymService(crypto_stub))
+        binder.bind(
+            PseudonymService,
+            PseudonymService(crypto_stub, verifier=None),
+        )
 
     inject.clear_and_configure(_bind)
     fastapi_app = application.setup_fastapi()

@@ -3,6 +3,7 @@ from app.config import (
     ConfigApp,
     ConfigHsmApi,
     ConfigLogging,
+    ConfigPseudonym,
     ConfigStats,
     ConfigTelemetry,
     ConfigUvicorn,
@@ -20,4 +21,9 @@ def get_test_config() -> Config:
         stats=ConfigStats(),
         hsm_api=ConfigHsmApi(mock=True, url="https://hsm.test", module="m", slot="s"),
         logging=ConfigLogging(),
+        pseudonym=ConfigPseudonym(
+            jwks_url="https://prs.test/.well-known/jwks",
+            expected_issuer="https://prs.test",
+            expected_audience="oin:00000099000000001000",
+        ),
     )

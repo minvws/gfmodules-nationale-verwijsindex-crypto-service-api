@@ -7,7 +7,13 @@ from fastapi.testclient import TestClient
 
 from app import container
 from app.config import Config
-from app.exceptions.exception import CryptoError, InvalidJweError, KeyNotFoundError
+from app.exceptions.exception import (
+    CryptoError,
+    InvalidJweError,
+    InvalidSignedPseudonymError,
+    JwksUnavailableError,
+    KeyNotFoundError,
+)
 from app.models.pseudonym import PseudonymResponse
 from app.routers.crypto import router as crypto_router
 
@@ -59,8 +65,16 @@ def test_process_returns_encrypted_pseudonym_with_iv(
         (CryptoError(), 500),
         (KeyNotFoundError(), 404),
         (InvalidJweError(), 400),
+        (InvalidSignedPseudonymError(), 400),
+        (JwksUnavailableError(), 503),
     ],
-    ids=["crypto", "key-not-found", "invalid-jwe"],
+    ids=[
+        "crypto",
+        "key-not-found",
+        "invalid-jwe",
+        "invalid-signature",
+        "jwks-unavailable",
+    ],
 )
 def test_process_maps_crypto_errors(
     client: TestClient, pseudonym_mock: MagicMock, exc: CryptoError, status: int
