@@ -27,12 +27,10 @@ class Log(_Base):
     SYS_UNHANDLED_EXCEPTION = _Base.SYS_UNHANDLED_EXCEPTION.with_id(
         "100604"
     )  # NVI-SYS-004
-    SYS_MISSING_CORRELATION_ID = _Base.SYS_MISSING_CORRELATION_ID.with_id(
-        "100606"
-    )  # NVI-SYS-006
+    SYS_MISSING_CORRELATION_ID = _Base.SYS_MISSING_CORRELATION_ID.with_id("100628")
 
-    SYS_CRYPTO_FAILED = LogEvent(
-        "100607",
+    SYS_CRYPTO_FAILED = LogEvent(  # NVI-SYS-006
+        "100606",
         logging.ERROR,
         (_APP, _SIEM),
         {_APP: ("error_type",), _SIEM: ("error_type",)},
