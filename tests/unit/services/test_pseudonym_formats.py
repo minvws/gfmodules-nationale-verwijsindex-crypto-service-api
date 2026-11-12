@@ -56,9 +56,10 @@ def test_signed_mode_never_unblinds_after_verification_failure(
     crypto_service_mock.decrypt_jwe_payload.return_value = b"header.payload.signature"
     unblind = mocker.patch("app.services.pseudonym_service.pyoprf.unblind")
     service = PseudonymService(crypto_service_mock, verifier=verifier)
+    blind_factor = _b64(b"blind")
 
     with pytest.raises(type(error)):
-        service.decrypt_and_unblind("outer-jwe", _b64(b"blind"))
+        service.decrypt_and_unblind("outer-jwe", blind_factor)
     unblind.assert_not_called()
 
 
@@ -68,9 +69,10 @@ def test_signed_mode_rejects_non_ascii_payload_before_verification(
     verifier = MagicMock(spec=PseudonymJwtVerifier)
     crypto_service_mock.decrypt_jwe_payload.return_value = b"\xff"
     service = PseudonymService(crypto_service_mock, verifier=verifier)
+    blind_factor = _b64(b"blind")
 
     with pytest.raises(InvalidSignedPseudonymError):
-        service.decrypt_and_unblind("outer-jwe", _b64(b"blind"))
+        service.decrypt_and_unblind("outer-jwe", blind_factor)
 
     verifier.verify.assert_not_called()
 
@@ -102,9 +104,10 @@ def test_unsigned_mode_rejects_wrong_payload_before_unblinding(
     crypto_service_mock.decrypt_jwe_payload.return_value = payload
     unblind = mocker.patch("app.services.pseudonym_service.pyoprf.unblind")
     service = PseudonymService(crypto_service_mock, verifier=None)
+    blind_factor = _b64(b"blind")
 
     with pytest.raises(InvalidJweError):
-        service.decrypt_and_unblind("outer-jwe", _b64(b"blind"))
+        service.decrypt_and_unblind("outer-jwe", blind_factor)
     unblind.assert_not_called()
 
 
@@ -119,11 +122,12 @@ def test_invalid_subject_encoding_is_rejected_before_unblinding(
     ).encode()
     unblind = mocker.patch("app.services.pseudonym_service.pyoprf.unblind")
     service = PseudonymService(crypto_service_mock, verifier=None)
+    blind_factor = _b64(b"blind")
 
     with pytest.raises(
         InvalidJweError, match="^OPRF subject or blind factor is invalid$"
     ):
-        service.decrypt_and_unblind("outer-jwe", _b64(b"blind"))
+        service.decrypt_and_unblind("outer-jwe", blind_factor)
     unblind.assert_not_called()
 
 
@@ -134,9 +138,10 @@ def test_invalid_oprf_input_is_a_safe_client_error(
         {"subject": f"pseudonym:eval:{_b64(b'short')}"}
     ).encode()
     service = PseudonymService(crypto_service_mock, verifier=None)
+    blind_factor = _b64(b"short")
 
     with pytest.raises(InvalidJweError):
-        service.decrypt_and_unblind("outer-jwe", _b64(b"short"))
+        service.decrypt_and_unblind("outer-jwe", blind_factor)
 
 
 def test_mock_hsm_does_not_bypass_signature_verification(mocker: MockerFixture) -> None:
@@ -148,9 +153,10 @@ def test_mock_hsm_does_not_bypass_signature_verification(mocker: MockerFixture) 
     verifier = PseudonymJwtVerifier(config, PseudonymJwksService(config))
     service = PseudonymService(MockCryptoService(), verifier=verifier)
     unblind = mocker.patch("app.services.pseudonym_service.pyoprf.unblind")
+    blind_factor = _b64(b"blind")
 
     with pytest.raises(InvalidSignedPseudonymError):
-        service.decrypt_and_unblind('{"subject":"pseudonym:eval:YWJj"}', _b64(b"blind"))
+        service.decrypt_and_unblind('{"subject":"pseudonym:eval:YWJj"}', blind_factor)
     unblind.assert_not_called()
 
 

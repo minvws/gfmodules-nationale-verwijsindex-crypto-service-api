@@ -141,12 +141,13 @@ def test_decrypt_and_unblind_logs_pse_exchange_failed_on_invalid_subject(
     crypto_service_mock.decrypt_jwe_payload.return_value = json.dumps(
         {"subject": "wrong-prefix:abc"}
     ).encode()
+    blind_factor = _b64(b"\x00" * 32)
     with (
         bind_context({"endpoint": "/decrypt_and_hash"}),
         capture_records(pseudonym_service_module.logger.name) as captured,
         pytest.raises(InvalidJweError),
     ):
-        pseudonym_service.decrypt_and_unblind("JWE", _b64(b"\x00" * 32))
+        pseudonym_service.decrypt_and_unblind("JWE", blind_factor)
 
     record = _events(captured, Log.PSE_EXCHANGE_FAILED.event_id)[0]
     assert record.error_type == "invalid_subject"

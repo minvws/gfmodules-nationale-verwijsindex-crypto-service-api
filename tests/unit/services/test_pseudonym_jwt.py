@@ -233,8 +233,9 @@ def test_rejects_missing_keys_and_disallowed_algorithms(
     http: MagicMock,
     header: dict[str, Any],
 ) -> None:
+    token = sign(signing_key, claims, header)
     with pytest.raises(InvalidSignedPseudonymError):
-        verifier.verify(sign(signing_key, claims, header))
+        verifier.verify(token)
 
 
 @pytest.mark.parametrize(
@@ -260,8 +261,9 @@ def test_rejects_hs256_even_if_cryptographically_valid(
     verifier: PseudonymJwtVerifier, claims: dict[str, Any], http: MagicMock
 ) -> None:
     key = jwk.JWK.generate(kty="oct", size=256)
+    token = sign(key, claims, {"alg": "HS256"})
     with pytest.raises(InvalidSignedPseudonymError):
-        verifier.verify(sign(key, claims, {"alg": "HS256"}))
+        verifier.verify(token)
 
 
 @pytest.mark.parametrize(
@@ -299,11 +301,12 @@ def test_rejects_invalid_claims(
         claims.pop(field, None)
     else:
         claims[field] = value
+    token = sign(signing_key, claims)
     with pytest.raises(
         InvalidSignedPseudonymError,
         match="^Signed pseudonym has an invalid signature or claims$",
     ):
-        verifier.verify(sign(signing_key, claims))
+        verifier.verify(token)
 
 
 @pytest.mark.parametrize("audience", [AUDIENCE, ["other", AUDIENCE]])
@@ -342,8 +345,9 @@ def test_incompatible_selected_key_is_a_service_error(
     else:
         key[field] = value
     http.return_value = cached_response({"keys": [key]})
+    token = sign(signing_key, claims)
     with pytest.raises(JwksUnavailableError, match=f"^{expected_error}$"):
-        verifier.verify(sign(signing_key, claims))
+        verifier.verify(token)
 
 
 def test_selected_rsa_key_must_be_at_least_3072_bits(
@@ -353,8 +357,9 @@ def test_selected_rsa_key_must_be_at_least_3072_bits(
 ) -> None:
     key = jwk.JWK.generate(kty="RSA", size=2048)
     http.return_value = cached_response({"keys": [public_key(key)]})
+    token = sign(key, claims)
     with pytest.raises(JwksUnavailableError):
-        verifier.verify(sign(key, claims))
+        verifier.verify(token)
 
 
 @pytest.mark.parametrize("operations", [["sign"], "verify", ["verify", 1]])
@@ -368,8 +373,9 @@ def test_selected_key_must_allow_verification(
     key = public_key(signing_key)
     key["key_ops"] = operations
     http.return_value = cached_response({"keys": [key]})
+    token = sign(signing_key, claims)
     with pytest.raises(JwksUnavailableError):
-        verifier.verify(sign(signing_key, claims))
+        verifier.verify(token)
 
 
 def test_selected_key_can_explicitly_permit_verification(
@@ -460,8 +466,9 @@ def test_http_errors_and_redirects_are_service_errors(
     status: int,
 ) -> None:
     http.return_value = response({}, status=status)
+    token = sign(signing_key, claims)
     with pytest.raises(JwksUnavailableError):
-        verifier.verify(sign(signing_key, claims))
+        verifier.verify(token)
 
 
 @pytest.mark.parametrize(
@@ -476,8 +483,9 @@ def test_jwks_network_failure_is_a_service_error(
     error: Exception,
 ) -> None:
     http.side_effect = error
+    token = sign(signing_key, claims)
     with pytest.raises(JwksUnavailableError):
-        verifier.verify(sign(signing_key, claims))
+        verifier.verify(token)
 
 
 def test_empty_keys_and_unknown_kid_are_client_errors(
@@ -487,10 +495,11 @@ def test_empty_keys_and_unknown_kid_are_client_errors(
     http: MagicMock,
 ) -> None:
     http.return_value = cached_response({"keys": []})
+    token = sign(signing_key, claims)
     with pytest.raises(
         InvalidSignedPseudonymError, match="^JWS signing key is not present in JWKS$"
     ) as exc:
-        verifier.verify(sign(signing_key, claims))
+        verifier.verify(token)
     assert exc.value.error_message == "Invalid JWE"
     assert http.call_count == 1
 
