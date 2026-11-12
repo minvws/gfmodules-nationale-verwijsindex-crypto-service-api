@@ -99,9 +99,10 @@ def test_decrypt_jwe_payload_rejects_non_object_jose_header() -> None:
     token.add_recipient(key)
     token.add_recipient(key)
     svc = _MockCryptoService(plaintext=b"payload")
+    serialized_token = token.serialize(compact=False)
 
     with pytest.raises(InvalidJweError):
-        svc.decrypt_jwe_payload(token.serialize(compact=False), {"application/json"})
+        svc.decrypt_jwe_payload(serialized_token, {"application/json"})
 
 
 def test_decrypt_jwe_payload_wraps_invalid_compact_serialization() -> None:

@@ -117,9 +117,10 @@ def test_same_kid_and_key_material_with_conflicting_metadata_is_rejected(
 ) -> None:
     key = generated_jwks["keys"][0]
     http.return_value = jwks_response({"keys": [key, {**key, "use": "enc"}]})
+    service = make_service()
 
     with pytest.raises(JwksUnavailableError, match="duplicate signing key IDs"):
-        make_service().get_keys()
+        service.get_keys()
 
 
 def test_conflicting_kids_fail_health_and_are_not_cached(
