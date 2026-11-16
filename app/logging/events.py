@@ -29,7 +29,7 @@ class Log(_Base):
     )  # NVI-SYS-004
     SYS_MISSING_CORRELATION_ID = _Base.SYS_MISSING_CORRELATION_ID.with_id("100628")
 
-    SYS_CRYPTO_FAILED = LogEvent(  # NVI-SYS-006
+    SYS_CRYPTO_FAILED = LogEvent(
         "100606",
         logging.ERROR,
         (_APP, _SIEM),
