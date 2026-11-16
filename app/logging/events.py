@@ -37,7 +37,7 @@ class Log(_Base):
         (_APP, _SIEM),
         {_APP: ("error_type",), _SIEM: ("error_type",)},
     )
-    HEALTH_UNHEALTHY = LogEvent(  # NVI-HEALTH-001
+    HEALTH_UNHEALTHY = LogEvent(
         "100600",
         logging.ERROR,
         (_APP, _SIEM),
