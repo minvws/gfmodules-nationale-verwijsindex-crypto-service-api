@@ -86,7 +86,10 @@ class PseudonymService:
         try:
             encoded_subject = subject.removeprefix("pseudonym:eval:")
             subj = base64.b64decode(encoded_subject, altchars=b"-_", validate=True)
-            bf = base64.b64decode(blind_factor, altchars=b"-_", validate=True)
+            # Normalize only trailing padding; keep the Base64 validation strict.
+            encoded_blind_factor = blind_factor.rstrip("=")
+            encoded_blind_factor += "=" * (-len(encoded_blind_factor) % 4)
+            bf = base64.b64decode(encoded_blind_factor, altchars=b"-_", validate=True)
             if not subj:
                 raise ValueError("Empty OPRF subject")
             result: bytes = pyoprf.unblind(bf, subj)

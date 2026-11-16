@@ -199,6 +199,126 @@ def test_process_accepts_the_configured_format(
     assert flow.http.call_count == (1 if signed else 0)
 
 
+@pytest.mark.parametrize(
+    "signed, content_type", [(True, "JWT"), (False, "application/json")]
+)
+@pytest.mark.parametrize(
+    "padding",
+    ["", "=", "==", "===", "===="],
+    ids=["unpadded", "canonical", "extra-one", "demo-extra-two", "extra-three"],
+)
+def test_process_accepts_blind_factor_padding_variants(
+    make_flow: Callable[..., Flow],
+    signing_key: jwk.JWK,
+    oprf_claims: tuple[dict[str, Any], bytes],
+    signed: bool,
+    content_type: str,
+    padding: str,
+) -> None:
+    claims, blind_factor = oprf_claims
+    flow = make_flow(signed, signed)
+    plaintext = sign(signing_key, claims) if signed else json.dumps(claims).encode()
+    evaluated = base64.urlsafe_b64decode(
+        claims["subject"].removeprefix("pseudonym:eval:")
+    )
+    expected = pyoprf.unblind(blind_factor, evaluated)
+
+    result = flow.client.post(
+        "/process",
+        json={
+            "jwe": flow.wrap(plaintext, content_type),
+            "blind_factor": b64(blind_factor).rstrip("=") + padding,
+            "label": "aes-key",
+            "mechanism": "AES_CBC",
+        },
+    )
+
+    assert result.status_code == 200
+    assert result.json() == {
+        "encrypted_pseudonym": b64(expected),
+        "iv": b64(hashlib.sha256(expected).digest()[:16]),
+    }
+
+
+@pytest.mark.parametrize(
+    "blind_factor",
+    [
+        "",
+        "===",
+        "é",
+        "A",
+        b64(b"\x01" * 32) + "!",
+        b64(b"\x01" * 32).replace("=", "\n="),
+        "=" + b64(b"\x01" * 32),
+        b64(b"\x01" * 32)[:10] + "=" + b64(b"\x01" * 32)[10:],
+        b64(b"\x01" * 31),
+        b64(b"\x01" * 33),
+        b64(bytes(32)),
+    ],
+    ids=[
+        "empty",
+        "padding-only",
+        "non-ascii",
+        "invalid-base64-length",
+        "invalid-character",
+        "whitespace",
+        "leading-padding",
+        "internal-padding",
+        "short-scalar",
+        "long-scalar",
+        "zero-scalar",
+    ],
+)
+def test_process_rejects_invalid_blind_factors_before_hashing_or_encrypting(
+    make_flow: Callable[..., Flow],
+    oprf_claims: tuple[dict[str, Any], bytes],
+    mocker: MockerFixture,
+    blind_factor: str,
+) -> None:
+    claims, _ = oprf_claims
+    flow = make_flow(signing_expected=False, configure_jwks=False)
+    hash_spy = mocker.spy(flow.crypto, "hash")
+    encrypt_spy = mocker.spy(flow.crypto, "encrypt_aes")
+
+    result = flow.client.post(
+        "/process",
+        json={
+            "jwe": flow.wrap(json.dumps(claims).encode(), "application/json"),
+            "blind_factor": blind_factor,
+            "label": "aes-key",
+            "mechanism": "AES_CBC",
+        },
+    )
+
+    assert result.status_code == 400
+    assert result.json() == {"error": "Invalid JWE"}
+    hash_spy.assert_not_called()
+    encrypt_spy.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    "signed, content_type", [(True, "JWT"), (False, "application/json")]
+)
+def test_process_does_not_normalize_the_subject_padding(
+    make_flow: Callable[..., Flow],
+    signing_key: jwk.JWK,
+    oprf_claims: tuple[dict[str, Any], bytes],
+    mocker: MockerFixture,
+    signed: bool,
+    content_type: str,
+) -> None:
+    claims, blind_factor = oprf_claims
+    claims["subject"] += "=="
+    flow = make_flow(signed, signed)
+    plaintext = sign(signing_key, claims) if signed else json.dumps(claims).encode()
+    unblind = mocker.spy(pyoprf, "unblind")
+
+    result = flow.post(plaintext, content_type, blind_factor)
+
+    assert result.status_code == 400
+    unblind.assert_not_called()
+
+
 def test_unsigned_json_without_content_type_is_rejected_before_unblinding(
     make_flow: Callable[..., Flow],
     oprf_claims: tuple[dict[str, Any], bytes],
