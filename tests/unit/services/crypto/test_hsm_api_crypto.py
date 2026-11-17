@@ -88,20 +88,28 @@ def _unwrap_cek_from_real_jwe(compact_jwe: str, key: jwk.JWK) -> bytes:
     return unwrap.decrypt(encrypted_key)
 
 
-def test_health_check_returns_true_on_200(
+def test_health_error_is_none_on_200(
     service: HsmApiCryptoService, http_mock: MagicMock
 ) -> None:
     http_mock.do_request.return_value = _resp(200, {"message": "ok"})
-    assert service.health_check() is True
+    assert service.health_error() is None
 
 
 @pytest.mark.parametrize(
-    "side_effect_or_status",
-    [500, 503, RequestsConnectionError("x"), Timeout("x")],
+    "side_effect_or_status,expected_error",
+    [
+        (500, "HSM API returned status 500"),
+        (503, "HSM API returned status 503"),
+        (RequestsConnectionError("x"), "HSM API unreachable: ConnectionError"),
+        (Timeout("x"), "HSM API unreachable: Timeout"),
+    ],
     ids=["500", "503", "conn", "timeout"],
 )
-def test_health_check_returns_false_on_failure(
-    side_effect_or_status: Any, service: HsmApiCryptoService, http_mock: MagicMock
+def test_health_error_describes_failure(
+    side_effect_or_status: Any,
+    expected_error: str,
+    service: HsmApiCryptoService,
+    http_mock: MagicMock,
 ) -> None:
     if isinstance(side_effect_or_status, int):
         http_mock.do_request.return_value = _resp(
@@ -109,7 +117,7 @@ def test_health_check_returns_false_on_failure(
         )
     else:
         http_mock.do_request.side_effect = side_effect_or_status
-    assert service.health_check() is False
+    assert service.health_error() == expected_error
 
 
 def test_get_public_key_returns_pem(

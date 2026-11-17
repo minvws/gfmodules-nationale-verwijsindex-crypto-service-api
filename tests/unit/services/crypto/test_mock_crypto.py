@@ -8,8 +8,8 @@ def mock_crypto_service() -> MockCryptoService:
     return MockCryptoService()
 
 
-def test_health_check_is_always_true(mock_crypto_service: MockCryptoService) -> None:
-    assert mock_crypto_service.health_check() is True
+def test_health_error_is_always_none(mock_crypto_service: MockCryptoService) -> None:
+    assert mock_crypto_service.health_error() is None
 
 
 def test_get_public_key_returns_sentinel(

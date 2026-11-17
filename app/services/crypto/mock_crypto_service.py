@@ -14,8 +14,8 @@ class MockCryptoService(CryptoService):
     Intended for local development and wiring smoke tests.
     """
 
-    def health_check(self) -> bool:
-        return True
+    def health_error(self) -> str | None:
+        return None
 
     def get_public_key(self, key_id: str) -> str:
         return "no-key"

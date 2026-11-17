@@ -25,25 +25,20 @@ def health(
 ) -> JSONResponse:
     logger.debug("Checking application health")
 
-    components = {
-        "hsm_api": ok_or_error(crypto_service.health_check()),
-    }
+    errors = {"hsm_api": crypto_service.health_error()}
     if jwks is not None:
-        components["jwks"] = ok_or_error(jwks.health_check())
-    healthy = all(status == "ok" for status in components.values())
+        errors["jwks"] = jwks.health_error()
+    components = {name: ok_or_error(error is None) for name, error in errors.items()}
+    healthy = all(error is None for error in errors.values())
 
-    if not healthy:
-        unhealthy = [name for name, status in components.items() if status != "ok"]
-        gflog.emit(
-            logger,
-            Log.HEALTH_UNHEALTHY,
-            "Health check unhealthy",
-            fields={
-                "component": ",".join(unhealthy),
-                "status": "error",
-                "error_detail": f"unhealthy components: {', '.join(unhealthy)}",
-            },
-        )
+    for name, error in errors.items():
+        if error is not None:
+            gflog.emit(
+                logger,
+                Log.HEALTH_UNHEALTHY,
+                "Health check unhealthy",
+                fields={"component": name, "status": "error", "error_detail": error},
+            )
 
     return JSONResponse(
         status_code=200 if healthy else 503,
