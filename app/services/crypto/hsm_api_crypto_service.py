@@ -32,21 +32,21 @@ class HsmApiCryptoService(CryptoService):
         self.hash_key_id = hash_key_id
         self.allowed_jwe_key_ids = frozenset(allowed_jwe_key_ids)
 
-    def health_check(self) -> bool:
+    def health_error(self) -> str | None:
         try:
             r = self._http.do_request("GET")
-        except (RequestsConnectionError, Timeout):
+        except (RequestsConnectionError, Timeout) as e:
             logger.exception("HSM API unreachable")
-            return False
+            return f"HSM API unreachable: {type(e).__name__}"
         if r.status_code != 200:
             logger.debug(
                 "HSM API health check failed with status %s: %s",
                 r.status_code,
                 r.text,
             )
-            return False
+            return f"HSM API returned status {r.status_code}"
         logger.debug("HSM API health check response: %s", r.json().get("message"))
-        return True
+        return None
 
     def get_public_key(self, key_id: str) -> str:
         """Retrieve the public key for an existing key pair identified by key_id.

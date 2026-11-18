@@ -16,10 +16,10 @@ class CryptoService(ABC):
     """
 
     @abstractmethod
-    def health_check(self) -> bool:
+    def health_error(self) -> str | None:
         """
         Perform a health check to verify the crypto service is operational.
-        Returns True if healthy, False otherwise.
+        Returns None if healthy, the error detail otherwise.
         """
 
     @abstractmethod

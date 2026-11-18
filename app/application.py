@@ -17,7 +17,7 @@ from gfmodules.logging.middleware import (
     restore_request_context,
 )
 
-from app.config import get_config
+from app.config import _ENVIRONMENT_CONFIG_PATH_NAME, _PATH, get_config
 from app.logging.events import Log
 from app.routers.crypto import router as crypto_router
 from app.routers.crypto import test_router as crypto_test_router
@@ -26,9 +26,6 @@ from app.routers.health import router as health_router
 from app.stats import StatsdMiddleware
 
 logger = logging.getLogger(__name__)
-
-_CONFIG_ENV = "FASTAPI_CONFIG_PATH"
-_DEFAULT_CONFIG_PATH = "app.conf"
 
 
 def get_uvicorn_params() -> dict[str, Any]:
@@ -101,7 +98,7 @@ async def _lifespan(_: FastAPI) -> AsyncIterator[None]:
     async with gflog.lifespan_logging(
         logger,
         version=_read_version(),
-        config_path=os.environ.get(_CONFIG_ENV, _DEFAULT_CONFIG_PATH),
+        config_path=os.environ.get(_ENVIRONMENT_CONFIG_PATH_NAME, _PATH),
         started_fields={
             "mock_hsm": config.hsm_api.mock,
             "telemetry_enabled": config.telemetry.enabled,

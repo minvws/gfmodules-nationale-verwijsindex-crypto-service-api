@@ -1,12 +1,15 @@
 import logging
+from http import HTTPStatus
 from typing import Annotated
 
+import gfmodules.logging as gflog
 from fastapi import APIRouter, Body, Depends
 from fastapi.responses import JSONResponse
 
 from app import container
 from app.data import Pkc11Mechanism
 from app.exceptions.exception import CryptoError
+from app.logging.events import Log
 from app.models.pseudonym import PseudonymRequest
 from app.services.crypto.crypto_service import CryptoService
 from app.services.pseudonym_service import PseudonymService
@@ -18,6 +21,22 @@ router = APIRouter()
 test_router = APIRouter(prefix="/test", tags=["Test"])
 
 
+def _crypto_error_response(error: CryptoError) -> JSONResponse:
+    if error.status_code >= HTTPStatus.INTERNAL_SERVER_ERROR:
+        gflog.emit(
+            logger,
+            Log.SYS_CRYPTO_FAILED,
+            "Crypto operation failed",
+            fields={"error_type": type(error).__name__},
+            exc_info=error,
+        )
+    else:
+        logger.warning("Crypto request rejected", exc_info=error)
+    return JSONResponse(
+        content={"error": error.error_message}, status_code=error.status_code
+    )
+
+
 @test_router.get("/public_key/{key_id}", summary="Return the NVI public key as PEM")
 def public_key(
     key_id: str,
@@ -26,10 +45,7 @@ def public_key(
     try:
         pem = crypto_service.get_public_key(key_id)
     except CryptoError as e:
-        logger.exception("CryptoError occurred")
-        return JSONResponse(
-            content={"error": e.error_message}, status_code=e.status_code
-        )
+        return _crypto_error_response(e)
 
     return JSONResponse(content={"kid": key_id, "pem": pem})
 
@@ -60,7 +76,4 @@ def process(
             status_code=200,
         )
     except CryptoError as e:
-        logger.exception("CryptoError occurred")
-        return JSONResponse(
-            content={"error": e.error_message}, status_code=e.status_code
-        )
+        return _crypto_error_response(e)

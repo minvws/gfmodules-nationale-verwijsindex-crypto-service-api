@@ -650,19 +650,19 @@ def test_expired_jwks_is_not_used_on_network_error(
 def test_health_uses_a_fresh_cache_when_endpoint_is_unreachable(
     jwks_service: PseudonymJwksService, http: MagicMock
 ) -> None:
-    assert jwks_service.health_check() is True
+    assert jwks_service.health_error() is None
     http.side_effect = requests.Timeout()
-    assert jwks_service.health_check() is True
+    assert jwks_service.health_error() is None
     assert http.call_count == 1
 
 
 def test_health_does_not_use_expired_cache_on_fetch_failure(
     jwks_service: PseudonymJwksService, http: MagicMock, clock: SimpleNamespace
 ) -> None:
-    assert jwks_service.health_check() is True
+    assert jwks_service.health_error() is None
     clock.now += 300
     http.side_effect = requests.Timeout()
-    assert jwks_service.health_check() is False
+    assert jwks_service.health_error() == "Could not retrieve or parse JWKS"
     assert http.call_count == 2
 
 
@@ -680,7 +680,7 @@ def test_health_fetch_uses_jwks_tls_and_timeout_settings(
             key_path="/tls/client.key",
         )
     )
-    assert jwks_service.health_check() is True
+    assert jwks_service.health_error() is None
     http.assert_called_once_with(
         method="GET",
         url=JWKS_URL,
