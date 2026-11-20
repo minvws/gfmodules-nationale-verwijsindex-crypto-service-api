@@ -112,7 +112,14 @@ def test_unsigned_mode_rejects_wrong_payload_before_unblinding(
 
 
 @pytest.mark.parametrize(
-    "subject", ["pseudonym:eval:!!!", "pseudonym:eval:a", "pseudonym:eval:a:b"]
+    "subject",
+    [
+        "pseudonym:eval:!!!",
+        "pseudonym:eval:a",
+        "pseudonym:eval:a:b",
+        f"pseudonym:eval:{_b64(b'subject').rstrip('=')}",
+        f"pseudonym:eval:{_b64(b'subject')}==",
+    ],
 )
 def test_invalid_subject_encoding_is_rejected_before_unblinding(
     crypto_service_mock: MagicMock, mocker: MockerFixture, subject: str
