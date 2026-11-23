@@ -59,7 +59,7 @@ def test_get_keys_shares_cache_with_health_and_key_selection(
 
     assert isinstance(keys, jwk.JWKSet)
     assert service.get_keys() is keys
-    assert service.health_check() is True
+    assert service.health_error() is None
     assert (
         service.get_key("key-1").export_public(as_dict=True)
         == generated_jwks["keys"][0]
@@ -108,7 +108,7 @@ def test_keys_without_valid_kid_are_skipped_before_import(
 
     assert {entry.get("kid") for entry in keys["keys"]} == {"key-1"}
     assert service.get_key("key-1").export_public(as_dict=True) == key
-    assert service.health_check() is True
+    assert service.health_error() is None
     assert http.call_count == 1
 
 
@@ -134,7 +134,7 @@ def test_conflicting_kids_fail_health_and_are_not_cached(
     ]
     service = make_service()
 
-    assert service.health_check() is False
+    assert service.health_error() == "JWKS contains duplicate signing key IDs"
     assert service.get_key(key["kid"]).export_public(as_dict=True) == key
     assert http.call_count == 2
 
@@ -150,7 +150,7 @@ def test_unexpected_fetch_errors_are_normalized(
     ):
         service.get_keys()
 
-    assert service.health_check() is False
+    assert service.health_error() == "Could not retrieve or parse JWKS"
 
 
 def test_only_unidentified_keys_produce_an_empty_cached_set(http: MagicMock) -> None:
@@ -158,7 +158,7 @@ def test_only_unidentified_keys_produce_an_empty_cached_set(http: MagicMock) -> 
     service = make_service()
 
     assert not service.get_keys()["keys"]
-    assert service.health_check() is True
+    assert service.health_error() is None
     with pytest.raises(InvalidSignedPseudonymError):
         service.get_key("missing")
     assert http.call_count == 1

@@ -24,22 +24,22 @@ expected_audience = oin:00000099000000001000
 # key_path = secrets/prs-client.key
 
 [logging]
-# All keys are optional. When syslog_path is omitted, logs only go to stdout.
-# Single syslog channel in host:port format (UDP). All streams (app, siem,
-# public_inspect, debug) are sent here; each JSON record carries a stream_id
-# field so the log server can tell them apart.
-syslog_path = syslog:5514
-# Identifies this application in the JSON records (application_id field),
-# so the log server can tell apart applications sharing the channel.
-application_id = nationale-verwijsindex-crypto-service-api
-# Emit an access record per request.
-access_logs = True
-# Include exception/stack traces in JSON logs
-include_traces = True
-# Comma-separated list of streams to print to the console. Valid values: app, siem, debug
-console_streams = app, siem, debug
-# Log an error when a request arrives without an X-GF-Correlation-ID header
-correlation_id_expected = False
+# Syslog server as host:port (UDP), empty logs to stdout only
+syslog_path=syslog:5514
+# Streams sent to syslog: app, siem, public_inspect, debug
+syslog_streams=app,siem,public_inspect
+# Name of this application in every log record
+application_id=nationale-verwijsindex-crypto-service-api
+# Streams printed to stdout: app, siem, debug
+console_streams=debug
+# Include tracebacks in logs
+include_traces=True
+# Log every request
+access_logs=True
+# Log an error when X-GF-Correlation-ID is missing
+correlation_id_expected=False
+# Take the client ip from X-Forwarded-For, only enable behind a trusted proxy
+trust_forwarded_for=False
 
 [hsm_api]
 # If true, use a pass-through mock instead of calling the HSM API

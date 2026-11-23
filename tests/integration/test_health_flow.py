@@ -5,21 +5,25 @@ from fastapi.testclient import TestClient
 
 
 @pytest.mark.parametrize(
-    "healthy,expected_status,expected_body",
+    "health_error,expected_status,expected_body",
     [
-        (True, 200, {"status": "ok", "components": {"hsm_api": "ok"}}),
-        (False, 503, {"status": "error", "components": {"hsm_api": "error"}}),
+        (None, 200, {"status": "ok", "components": {"hsm_api": "ok"}}),
+        (
+            "HSM API unreachable: Timeout",
+            503,
+            {"status": "error", "components": {"hsm_api": "error"}},
+        ),
     ],
     ids=["healthy", "unhealthy"],
 )
 def test_health_endpoint_reflects_crypto_status(
     client: TestClient,
     crypto_stub: MagicMock,
-    healthy: bool,
+    health_error: str | None,
     expected_status: int,
     expected_body: dict[str, object],
 ) -> None:
-    crypto_stub.health_check.return_value = healthy
+    crypto_stub.health_error.return_value = health_error
 
     response = client.get("/health")
 

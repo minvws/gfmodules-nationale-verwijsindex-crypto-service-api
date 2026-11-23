@@ -33,8 +33,8 @@ class LocalCryptoService(CryptoService):
     def __init__(self, keys: dict[str, jwk.JWK]) -> None:
         self._keys = keys
 
-    def health_check(self) -> bool:
-        return True
+    def health_error(self) -> str | None:
+        return None
 
     def get_public_key(self, key_id: str) -> str:
         return (

@@ -52,8 +52,8 @@ class LocalCryptoService(CryptoService):
     def __init__(self, key: jwk.JWK) -> None:
         self.key = key
 
-    def health_check(self) -> bool:
-        return True
+    def health_error(self) -> str | None:
+        return None
 
     def get_public_key(self, key_id: str) -> str:
         return self.key.export_to_pem().decode()

@@ -14,6 +14,9 @@ from app.routers import health as health_module
 from app.routers.health import router as health_router
 from app.services.pseudonym_jwks import PseudonymJwksService
 
+HSM_DOWN = "HSM API unreachable: Timeout"
+JWKS_DOWN = "Could not retrieve or parse JWKS"
+
 
 @pytest.fixture
 def client(crypto_mock: MagicMock) -> Iterator[TestClient]:
@@ -28,7 +31,7 @@ def client(crypto_mock: MagicMock) -> Iterator[TestClient]:
 def test_health_returns_ok_when_crypto_healthy(
     client: TestClient, crypto_mock: MagicMock
 ) -> None:
-    crypto_mock.health_check.return_value = True
+    crypto_mock.health_error.return_value = None
 
     response = client.get("/health")
 
@@ -39,7 +42,7 @@ def test_health_returns_ok_when_crypto_healthy(
 def test_health_returns_503_when_crypto_unhealthy(
     client: TestClient, crypto_mock: MagicMock
 ) -> None:
-    crypto_mock.health_check.return_value = False
+    crypto_mock.health_error.return_value = HSM_DOWN
 
     response = client.get("/health")
 
@@ -50,7 +53,7 @@ def test_health_returns_503_when_crypto_unhealthy(
 def test_health_logs_health_unhealthy_when_crypto_unhealthy(
     client: TestClient, crypto_mock: MagicMock, mocker: MockerFixture
 ) -> None:
-    crypto_mock.health_check.return_value = False
+    crypto_mock.health_error.return_value = HSM_DOWN
 
     with capture_records(health_module.logger.name) as captured:
         client.get("/health")
@@ -62,14 +65,40 @@ def test_health_logs_health_unhealthy_when_crypto_unhealthy(
     ]
     assert len(unhealthy) == 1
     record = unhealthy[0]
-    assert record.unhealthy_component == "hsm_api"
+    assert record.component == "hsm_api"
     assert record.status == "error"
+    assert record.error_detail == HSM_DOWN
+
+
+def test_health_logs_health_unhealthy_per_unhealthy_component(
+    crypto_mock: MagicMock,
+) -> None:
+    jwks_service = MagicMock(spec=PseudonymJwksService)
+    jwks_service.health_error.return_value = JWKS_DOWN
+    crypto_mock.health_error.return_value = HSM_DOWN
+    app = FastAPI()
+    app.include_router(health_router)
+    app.dependency_overrides[get_crypto_service] = lambda: crypto_mock
+    app.dependency_overrides[get_pseudonym_jwks_service] = lambda: jwks_service
+
+    with capture_records(health_module.logger.name) as captured:
+        TestClient(app).get("/health")
+
+    unhealthy: list[Any] = [
+        entry.record
+        for entry in captured.entries
+        if getattr(entry.record, "event_id", None) == Log.HEALTH_UNHEALTHY.event_id
+    ]
+    assert [(record.component, record.error_detail) for record in unhealthy] == [
+        ("hsm_api", HSM_DOWN),
+        ("jwks", JWKS_DOWN),
+    ]
 
 
 def test_health_does_not_log_when_healthy(
     client: TestClient, crypto_mock: MagicMock, mocker: MockerFixture
 ) -> None:
-    crypto_mock.health_check.return_value = True
+    crypto_mock.health_error.return_value = None
 
     with capture_records(health_module.logger.name) as captured:
         client.get("/health")
@@ -80,23 +109,23 @@ def test_health_does_not_log_when_healthy(
 
 
 @pytest.mark.parametrize(
-    "hsm_ok,jwks_ok,expected_status,expected_components",
+    "hsm_error,jwks_error,expected_status,expected_components",
     [
-        (True, True, 200, {"hsm_api": "ok", "jwks": "ok"}),
-        (True, False, 503, {"hsm_api": "ok", "jwks": "error"}),
-        (False, True, 503, {"hsm_api": "error", "jwks": "ok"}),
+        (None, None, 200, {"hsm_api": "ok", "jwks": "ok"}),
+        (None, JWKS_DOWN, 503, {"hsm_api": "ok", "jwks": "error"}),
+        (HSM_DOWN, None, 503, {"hsm_api": "error", "jwks": "ok"}),
     ],
 )
 def test_health_reports_hsm_and_jwks_status(
     crypto_mock: MagicMock,
-    hsm_ok: bool,
-    jwks_ok: bool,
+    hsm_error: str | None,
+    jwks_error: str | None,
     expected_status: int,
     expected_components: dict[str, str],
 ) -> None:
     jwks_service = MagicMock(spec=PseudonymJwksService)
-    jwks_service.health_check.return_value = jwks_ok
-    crypto_mock.health_check.return_value = hsm_ok
+    jwks_service.health_error.return_value = jwks_error
+    crypto_mock.health_error.return_value = hsm_error
     app = FastAPI()
     app.include_router(health_router)
     app.dependency_overrides[get_crypto_service] = lambda: crypto_mock

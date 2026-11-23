@@ -51,12 +51,12 @@ class PseudonymJwksService:
         self._cache: _CachedJwks | None = None
         self._lock = threading.Lock()
 
-    def health_check(self) -> bool:
+    def health_error(self) -> str | None:
         try:
             self.get_keys()
-            return True
-        except JwksUnavailableError:
-            return False
+        except JwksUnavailableError as e:
+            return str(e)
+        return None
 
     def get_keys(self) -> jwk.JWKSet:
         with self._lock:
